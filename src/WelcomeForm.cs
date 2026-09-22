@@ -1,7 +1,6 @@
 using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Diagnostics;
 
@@ -13,12 +12,6 @@ namespace GujasPCFix
         private readonly Stopwatch _clock = new Stopwatch();
         private Bitmap _frost;
         private bool _closing;
-
-        [DllImport("winmm.dll")]
-        private static extern uint timeBeginPeriod(uint period);
-
-        [DllImport("winmm.dll")]
-        private static extern uint timeEndPeriod(uint period);
 
         public Image Frost
         {
@@ -39,7 +32,7 @@ namespace GujasPCFix
             Theme.LoadWallpaper();
             BackgroundImage = null;
             SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
-            _timer.Interval = 8;
+            _timer.Interval = 16;
             _timer.Tick += delegate { TickFrame(); };
         }
 
@@ -51,7 +44,6 @@ namespace GujasPCFix
             {
                 Region = new Region(round);
             }
-            timeBeginPeriod(1);
             _clock.Start();
             _timer.Start();
         }
@@ -59,7 +51,6 @@ namespace GujasPCFix
         protected override void OnFormClosed(FormClosedEventArgs e)
         {
             _timer.Stop();
-            timeEndPeriod(1);
             if (_frost != null) _frost.Dispose();
             base.OnFormClosed(e);
         }
@@ -72,7 +63,7 @@ namespace GujasPCFix
 
         private void TickFrame()
         {
-            if (_clock.ElapsedMilliseconds >= 2400)
+            if (_clock.ElapsedMilliseconds >= 1400)
             {
                 Finish();
                 return;
@@ -107,23 +98,23 @@ namespace GujasPCFix
             float welcomeAlpha;
             float load;
             float fadeOut;
-            if (t < 700)
+            if (t < 400)
             {
-                welcomeAlpha = Ease((float)(t / 700.0));
+                welcomeAlpha = Ease((float)(t / 400.0));
                 load = 0;
                 fadeOut = 1f;
             }
-            else if (t < 1900)
+            else if (t < 1100)
             {
                 welcomeAlpha = 1f;
-                load = Ease((float)((t - 700.0) / 1200.0));
+                load = Ease((float)((t - 400.0) / 700.0));
                 fadeOut = 1f;
             }
             else
             {
                 welcomeAlpha = 1f;
                 load = 1f;
-                fadeOut = 1f - Ease((float)((t - 1900.0) / 500.0));
+                fadeOut = 1f - Ease((float)((t - 1100.0) / 300.0));
             }
 
             using (SolidBrush dim = new SolidBrush(Color.FromArgb((int)(50 * fadeOut), 0, 0, 0)))

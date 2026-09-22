@@ -1,5 +1,7 @@
 using System;
 using System.Drawing;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -43,10 +45,19 @@ namespace GujasPCFix
         private readonly TextBox _cpuBox = MakeField();
         private readonly TextBox _gpuBox = MakeField();
         private readonly TextBox _tuneTips = MakeMultiline();
+        private readonly ComboBox _gameProfile = new ComboBox();
+        private readonly List<GameProfile> _gameProfiles = GameProfiles.Create();
         private readonly TextBox _log = MakeMultiline();
         private readonly GlassButton _scanButton = new GlassButton();
         private readonly GlassButton _boostButton = new GlassButton();
+        private readonly GlassButton _restoreButton = new GlassButton();
+        private readonly GlassButton _recommendedButton = new GlassButton();
         private readonly GlassButton _tuneButton = new GlassButton();
+        private readonly TextBox _tweakSearch = MakeField();
+        private readonly ComboBox _tweakCategory = new ComboBox();
+        private readonly CheckedListBox _tweakList = new CheckedListBox();
+        private readonly Label _tweakDescription = MakeMuted();
+        private readonly List<TweakDefinition> _tweaks = TweakCatalog.Create();
         private bool _busy;
         private int _ramGb;
         private bool _filledHardware;
@@ -156,53 +167,131 @@ namespace GujasPCFix
 
         private void BuildOptimize()
         {
-            _pageOptimize.Controls.Add(Heading("Optimize", 24, 20, 26));
-            _pageOptimize.Controls.Add(Sub("Choose the Windows passes to run. Nested items in the menu map to this list.", 26, 62));
-            FlowLayoutPanel flow = new FlowLayoutPanel();
-            flow.Location = new Point(20, 100);
-            flow.Size = new Size(790, 430);
-            flow.BackColor = Color.Transparent;
-            flow.FlowDirection = FlowDirection.TopDown;
-            flow.WrapContents = false;
-            flow.Controls.Add(_cleanTemp);
-            flow.Controls.Add(_recycle);
-            flow.Controls.Add(_dns);
-            flow.Controls.Add(_thumbs);
-            flow.Controls.Add(_power);
-            flow.Controls.Add(_game);
-            flow.Controls.Add(_gpuSched);
-            flow.Controls.Add(_netTune);
-            flow.Controls.Add(_visuals);
-            _pageOptimize.Controls.Add(flow);
-            _boostButton.Text = "Run optimization";
+            _pageOptimize.Controls.Add(Heading("Performance Tweaks", 24, 16, 26));
+            _pageOptimize.Controls.Add(Sub("60 transparent tweaks. Select only what you want, every registry change can be restored.", 26, 56));
+
+            _tweakSearch.Location = new Point(24, 88);
+            _tweakSearch.Size = new Size(330, 30);
+            _tweakSearch.TextChanged += delegate { RefreshTweakList(); };
+            _pageOptimize.Controls.Add(_tweakSearch);
+
+            _tweakCategory.Location = new Point(370, 88);
+            _tweakCategory.Size = new Size(190, 30);
+            _tweakCategory.DropDownStyle = ComboBoxStyle.DropDownList;
+            _tweakCategory.BackColor = Color.FromArgb(18, 18, 20);
+            _tweakCategory.ForeColor = Fg;
+            _tweakCategory.Items.Add("All categories");
+            foreach (string category in _tweaks.Select(x => x.Category).Distinct()) _tweakCategory.Items.Add(category);
+            _tweakCategory.SelectedIndex = 0;
+            _tweakCategory.SelectedIndexChanged += delegate { RefreshTweakList(); };
+            _pageOptimize.Controls.Add(_tweakCategory);
+
+            _recommendedButton.Text = "Recommended";
+            _recommendedButton.Size = new Size(160, 38);
+            _recommendedButton.Location = new Point(574, 84);
+            _recommendedButton.Click += delegate { SelectRecommended(); };
+            _pageOptimize.Controls.Add(_recommendedButton);
+
+            _tweakList.Location = new Point(24, 132);
+            _tweakList.Size = new Size(790, 398);
+            _tweakList.BackColor = Color.FromArgb(12, 12, 14);
+            _tweakList.ForeColor = Fg;
+            _tweakList.BorderStyle = BorderStyle.None;
+            _tweakList.CheckOnClick = true;
+            _tweakList.Font = new Font("Segoe UI", 10.5f);
+            _tweakList.ItemCheck += delegate(object sender, ItemCheckEventArgs e)
+            {
+                BeginInvoke(new Action(UpdateTweakSummary));
+            };
+            _tweakList.SelectedIndexChanged += delegate
+            {
+                TweakDefinition item = _tweakList.SelectedItem as TweakDefinition;
+                _tweakDescription.Text = item == null ? "Select a tweak to read what it changes." : item.Description + (item.RestartRequired ? "  Restart required." : "");
+            };
+            _pageOptimize.Controls.Add(_tweakList);
+
+            _tweakDescription.Location = new Point(28, 542);
+            _tweakDescription.MaximumSize = new Size(780, 46);
+            _pageOptimize.Controls.Add(_tweakDescription);
+
+            _boostButton.Text = "Apply selected";
             _boostButton.Emphasized = true;
-            _boostButton.Size = new Size(220, 50);
-            _boostButton.Location = new Point(24, 640);
+            _boostButton.Size = new Size(190, 48);
+            _boostButton.Location = new Point(24, 630);
             _boostButton.Click += delegate { RunBoost(); };
             _pageOptimize.Controls.Add(_boostButton);
+
+            _restoreButton.Text = "Restore defaults";
+            _restoreButton.Size = new Size(190, 48);
+            _restoreButton.Location = new Point(228, 630);
+            _restoreButton.Click += delegate { RestoreTweaks(); };
+            _pageOptimize.Controls.Add(_restoreButton);
+            RefreshTweakList();
+        }
+
+        private void RefreshTweakList()
+        {
+            if (_tweakCategory.SelectedIndex < 0) return;
+            HashSet<string> selected = new HashSet<string>();
+            foreach (object value in _tweakList.CheckedItems)
+            {
+                TweakDefinition old = value as TweakDefinition;
+                if (old != null) selected.Add(old.Id);
+            }
+            string query = _tweakSearch.Text.Trim();
+            string category = _tweakCategory.SelectedItem == null ? "All categories" : _tweakCategory.SelectedItem.ToString();
+            _tweakList.BeginUpdate();
+            _tweakList.Items.Clear();
+            foreach (TweakDefinition tweak in _tweaks)
+            {
+                if (category != "All categories" && tweak.Category != category) continue;
+                if (query.Length > 0 && tweak.Name.IndexOf(query, StringComparison.OrdinalIgnoreCase) < 0 && tweak.Description.IndexOf(query, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                _tweakList.Items.Add(tweak, selected.Contains(tweak.Id));
+            }
+            _tweakList.EndUpdate();
+            UpdateTweakSummary();
+        }
+
+        private void SelectRecommended()
+        {
+            for (int i = 0; i < _tweakList.Items.Count; i++)
+            {
+                TweakDefinition tweak = (TweakDefinition)_tweakList.Items[i];
+                _tweakList.SetItemChecked(i, tweak.Recommended);
+            }
+            UpdateTweakSummary();
+        }
+
+        private void UpdateTweakSummary()
+        {
+            int restart = 0;
+            foreach (object value in _tweakList.CheckedItems) if (((TweakDefinition)value).RestartRequired) restart++;
+            _recommendedButton.Text = _tweakList.CheckedItems.Count + " selected" + (restart > 0 ? "  • " + restart + " restart" : "");
         }
 
         private void BuildTuner()
         {
-            _pageTuner.Controls.Add(Heading("Component tuner", 24, 20, 26));
-            _pageTuner.Controls.Add(Sub("CPU and GPU names drive a profile for this hardware. Edit them if detection is wrong.", 26, 62));
-            _pageTuner.Controls.Add(SmallLabel("CPU", 26, 110));
-            _cpuBox.Location = new Point(26, 132);
-            _cpuBox.Size = new Size(500, 30);
-            _pageTuner.Controls.Add(_cpuBox);
-            _pageTuner.Controls.Add(SmallLabel("GPU", 26, 178));
-            _gpuBox.Location = new Point(26, 200);
-            _gpuBox.Size = new Size(500, 30);
-            _pageTuner.Controls.Add(_gpuBox);
-            _tuneButton.Text = "Compile profile";
+            _pageTuner.Controls.Add(Heading("Games Tweaker", 24, 20, 26));
+            _pageTuner.Controls.Add(Sub("Choose a game to load safe Windows tweaks and tested in-game recommendations.", 26, 62));
+            _pageTuner.Controls.Add(SmallLabel("Game profile", 26, 110));
+            _gameProfile.Location = new Point(26, 136);
+            _gameProfile.Size = new Size(360, 32);
+            _gameProfile.DropDownStyle = ComboBoxStyle.DropDownList;
+            _gameProfile.BackColor = Color.FromArgb(18,18,20);
+            _gameProfile.ForeColor = Fg;
+            foreach (GameProfile profile in _gameProfiles) _gameProfile.Items.Add(profile);
+            _gameProfile.SelectedIndexChanged += delegate { PreviewGameProfile(); };
+            _pageTuner.Controls.Add(_gameProfile);
+            _tuneButton.Text = "Load game tweaks";
             _tuneButton.Size = new Size(200, 44);
-            _tuneButton.Location = new Point(26, 250);
+            _tuneButton.Location = new Point(410, 130);
             _tuneButton.Click += delegate { ApplyTuner(); };
             _pageTuner.Controls.Add(_tuneButton);
-            _tuneTips.Location = new Point(26, 316);
-            _tuneTips.Size = new Size(790, 300);
-            _tuneTips.Text = "Scan fills these fields. Compile a profile, then open Optimize and run it.";
+            _tuneTips.Location = new Point(26, 200);
+            _tuneTips.Size = new Size(790, 410);
+            _tuneTips.Text = "Select Counter-Strike 2, Fortnite, Rainbow Six Siege, Minecraft or Far Cry 6.";
             _pageTuner.Controls.Add(_tuneTips);
+            _gameProfile.SelectedIndex = 0;
         }
 
         private void BuildActivity()
@@ -268,30 +357,36 @@ namespace GujasPCFix
 
         private void ApplyTuner()
         {
-            TuneProfile profile = HardwareAdvisor.Recommend(_cpuBox.Text, _gpuBox.Text, _ramGb);
-            _cleanTemp.Checked = profile.CleanTemp;
-            _recycle.Checked = profile.EmptyRecycleBin;
-            _dns.Checked = profile.FlushDns;
-            _power.Checked = profile.HighPerformancePower;
-            _game.Checked = profile.GameMode;
-            _visuals.Checked = profile.VisualPerformance;
-            _gpuSched.Checked = profile.GpuScheduling;
-            _netTune.Checked = profile.NetworkTuning;
-            _thumbs.Checked = profile.Thumbnails;
-
-            System.Text.StringBuilder sb = new System.Text.StringBuilder();
-            sb.AppendLine(profile.Summary);
-            if (profile.Tips != null)
+            GameProfile profile = _gameProfile.SelectedItem as GameProfile;
+            if (profile == null) return;
+            _tweakSearch.Text = "";
+            _tweakCategory.SelectedIndex = 0;
+            HashSet<string> ids = new HashSet<string>(profile.TweakIds);
+            for (int i = 0; i < _tweakList.Items.Count; i++)
             {
-                for (int i = 0; i < profile.Tips.Length; i++)
-                {
-                    sb.Append("• ");
-                    sb.AppendLine(profile.Tips[i]);
-                }
+                TweakDefinition tweak = (TweakDefinition)_tweakList.Items[i];
+                _tweakList.SetItemChecked(i, ids.Contains(tweak.Id));
             }
-            _tuneTips.Text = sb.ToString();
-            AppendLog("Component profile applied. Open Optimize to run it.");
+            AppendLog(profile.Name + " profile loaded with " + ids.Count + " Windows tweaks.");
             SyncNav(AppPage.Optimize);
+        }
+
+        private void PreviewGameProfile()
+        {
+            GameProfile profile = _gameProfile.SelectedItem as GameProfile;
+            if (profile == null) return;
+            System.Text.StringBuilder text = new System.Text.StringBuilder();
+            string install = profile.FindInstall();
+            text.AppendLine(install == null ? "Status: game was not found in a standard folder" : "Detected: " + install);
+            text.AppendLine();
+            text.AppendLine("Recommended game settings");
+            foreach (string setting in profile.Settings) text.AppendLine("• " + setting);
+            text.AppendLine();
+            text.AppendLine("Launch/profile guidance");
+            text.AppendLine(profile.LaunchOptions);
+            text.AppendLine();
+            text.AppendLine("The Load game tweaks button selects " + profile.TweakIds.Length + " matching Windows tweaks. You review them before applying anything.");
+            _tuneTips.Text = text.ToString();
         }
 
         private void RunScan()
@@ -328,41 +423,25 @@ namespace GujasPCFix
         private void RunBoost()
         {
             if (_busy) return;
-            BoostOptions options = new BoostOptions();
-            options.CleanTemp = _cleanTemp.Checked;
-            options.EmptyRecycleBin = _recycle.Checked;
-            options.FlushDns = _dns.Checked;
-            options.HighPerformancePower = _power.Checked;
-            options.GameMode = _game.Checked;
-            options.VisualPerformance = _visuals.Checked;
-            options.GpuScheduling = _gpuSched.Checked;
-            options.NetworkTuning = _netTune.Checked;
-            options.Thumbnails = _thumbs.Checked;
-            if (!options.CleanTemp && !options.EmptyRecycleBin && !options.FlushDns &&
-                !options.HighPerformancePower && !options.GameMode && !options.VisualPerformance &&
-                !options.GpuScheduling && !options.NetworkTuning && !options.Thumbnails)
-            {
-                AppendLog("Select at least one option.");
-                return;
-            }
+            List<TweakDefinition> selected = new List<TweakDefinition>();
+            foreach (object value in _tweakList.CheckedItems) selected.Add((TweakDefinition)value);
+            if (selected.Count == 0) { AppendLog("Select at least one tweak."); return; }
 
             SetBusy(true);
-            AppendLog("==== optimization pass " + DateTime.Now.ToString("HH:mm:ss") + " ====");
+            AppendLog("==== applying " + selected.Count + " tweaks " + DateTime.Now.ToString("HH:mm:ss") + " ====");
             ThreadPool.QueueUserWorkItem(delegate
             {
                 try
                 {
-                    BoostResult result = PcFixEngine.Boost(options, delegate(string msg)
+                    TweakRunResult result = TweakExecutor.Apply(selected, delegate(string msg)
                     {
                         BeginInvoke(new Action(delegate { AppendLog(msg); }));
                     });
                     BeginInvoke(new Action(delegate
                     {
-                        for (int i = 0; i < result.Warnings.Count; i++)
-                            AppendLog("Warning: " + result.Warnings[i]);
-                        AppendLog("Freed " + PcFixEngine.FormatBytes(result.BytesFreed) + " across " + result.FilesRemoved + " files.");
+                        for (int i = 0; i < result.Errors.Count; i++) AppendLog("Could not apply: " + result.Errors[i]);
+                        AppendLog("Completed. " + result.Applied + " of " + selected.Count + " tweaks applied.");
                         SetBusy(false);
-                        RunScan();
                         SyncNav(AppPage.Activity);
                     }));
                 }
@@ -374,6 +453,28 @@ namespace GujasPCFix
                         SetBusy(false);
                     }));
                 }
+            });
+        }
+
+        private void RestoreTweaks()
+        {
+            if (_busy) return;
+            List<TweakDefinition> selected = new List<TweakDefinition>();
+            foreach (object value in _tweakList.CheckedItems) selected.Add((TweakDefinition)value);
+            if (selected.Count == 0) { AppendLog("Select the tweaks you want to restore."); return; }
+            DialogResult answer = MessageBox.Show("Restore the Windows defaults for " + selected.Count + " selected tweaks?", "Gujas PC Fix", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+            if (answer != DialogResult.Yes) return;
+            SetBusy(true);
+            ThreadPool.QueueUserWorkItem(delegate
+            {
+                TweakRunResult result = TweakExecutor.Restore(selected, delegate(string msg) { BeginInvoke(new Action(delegate { AppendLog(msg); })); });
+                BeginInvoke(new Action(delegate
+                {
+                    for (int i = 0; i < result.Errors.Count; i++) AppendLog("Could not restore: " + result.Errors[i]);
+                    AppendLog("Restored " + result.Applied + " registry tweaks.");
+                    SetBusy(false);
+                    SyncNav(AppPage.Activity);
+                }));
             });
         }
 
@@ -412,6 +513,8 @@ namespace GujasPCFix
             _busy = busy;
             _scanButton.Enabled = !busy;
             _boostButton.Enabled = !busy;
+            _restoreButton.Enabled = !busy;
+            _recommendedButton.Enabled = !busy;
             _tuneButton.Enabled = !busy;
             UseWaitCursor = busy;
         }

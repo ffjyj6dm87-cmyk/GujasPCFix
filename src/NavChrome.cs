@@ -169,11 +169,11 @@ namespace GujasPCFix
             y = DrawRow(g, y, "Optimize", AppPage.Optimize, true);
             if (OptimizeOpen)
             {
-                y = DrawChild(g, y, "Temp, Recycle Bin, DNS");
-                y = DrawChild(g, y, "Power plan and Game Mode");
-                y = DrawChild(g, y, "GPU scheduling and network");
+                y = DrawChild(g, y, "60 performance tweaks");
+                y = DrawChild(g, y, "Search and categories");
+                y = DrawChild(g, y, "Restore Windows defaults");
             }
-            y = DrawRow(g, y, "Component tuner", AppPage.Tuner, false);
+            y = DrawRow(g, y, "Games Tweaker", AppPage.Tuner, false);
             DrawRow(g, y, "Activity", AppPage.Activity, false);
         }
 
