@@ -10,6 +10,9 @@
     <Platforms>AnyCPU</Platforms>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
     <EmbeddedResource Include="assets\bg.jpg" LogicalName="GujasPCFix.bg.jpg" />
+    <EmbeddedResource Include="assets\design-reference.png" LogicalName="GujasPCFix.games.png" />
+    <EmbeddedResource Include="assets\dashboard-reference.png" LogicalName="GujasPCFix.dashboard.png" />
   </ItemGroup>
 </Project>
