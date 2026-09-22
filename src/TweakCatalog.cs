@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Text;
 using Microsoft.Win32;
 
 namespace GujasPCFix
@@ -16,6 +18,7 @@ namespace GujasPCFix
         public RegistryValueKind Kind = RegistryValueKind.DWord;
         public bool Recommended, RestartRequired;
         public TweakRisk Risk;
+        public string SettingsUri, DisabledReason, Evidence;
 
         public override string ToString() { return Name; }
     }
@@ -111,6 +114,7 @@ namespace GujasPCFix
             C(t,"trim","Maintenance","Run SSD retrim","Sends TRIM hints to supported SSDs.","defrag.exe","C: /L /O","",false,false);
             C(t,"time-sync","Maintenance","Synchronize Windows time","Requests a time-service resynchronization.","w32tm.exe","/resync","",false,false);
 
+            TweakAudit.Review(t);
             return t;
         }
 
@@ -137,7 +141,9 @@ namespace GujasPCFix
             {
                 try
                 {
-                    if (!string.IsNullOrEmpty(tweak.Command)) Run(tweak.Command);
+                    if (!string.IsNullOrEmpty(tweak.DisabledReason) || !string.IsNullOrEmpty(tweak.SettingsUri))
+                        throw new InvalidOperationException(tweak.DisabledReason ?? "Use Windows Settings for this option.");
+                    if (!string.IsNullOrEmpty(tweak.Command)) result.Log.Add(Run(tweak.Command));
                     else Write(tweak, false);
                     result.Applied++;
                     result.Log.Add("Applied: " + tweak.Name);
@@ -153,7 +159,7 @@ namespace GujasPCFix
             TweakRunResult result = new TweakRunResult();
             foreach (TweakDefinition tweak in tweaks)
             {
-                if (!string.IsNullOrEmpty(tweak.Command)) continue;
+                if (!string.IsNullOrEmpty(tweak.Command)) { result.Errors.Add(tweak.Name + ": command cannot be restored."); continue; }
                 try { Write(tweak, true); result.Applied++; if (progress != null) progress("Restored: " + tweak.Name); }
                 catch (Exception ex) { result.Errors.Add(tweak.Name + ": " + ex.Message); }
             }
@@ -164,29 +170,72 @@ namespace GujasPCFix
         {
             RegistryKey root = RegistryKey.OpenBaseKey(tweak.Hive, RegistryView.Registry64);
             using (root)
-            using (RegistryKey key = root.CreateSubKey(tweak.Path))
             {
-                if (key == null) throw new InvalidOperationException("Registry key unavailable");
-                object value = undo ? tweak.UndoValue : tweak.Value;
-                if (value == null) key.DeleteValue(tweak.ValueName, false);
-                else key.SetValue(tweak.ValueName, value, tweak.Kind);
+                // The backup belongs to this precise target and survives repeated applies.
+                string backupPath = @"Software\GujasPCFix\Backups\" + tweak.Id;
+                using (RegistryKey backup = undo ? Registry.CurrentUser.OpenSubKey(backupPath, true) : Registry.CurrentUser.CreateSubKey(backupPath))
+                {
+                    if (backup == null) throw new InvalidOperationException("No saved original value for this tweak.");
+                    string target = tweak.Hive + "\\" + tweak.Path + "\\" + tweak.ValueName;
+                    if (backup.GetValue("Complete") != null && !Equals(backup.GetValue("Target"), target))
+                        throw new InvalidOperationException("Backup target does not match the requested setting.");
+                    if (undo && backup.GetValue("Complete") == null)
+                        throw new InvalidOperationException("No complete backup available. Nothing was changed.");
+                    if (!undo && backup.GetValue("Complete") == null)
+                    {
+                        using (RegistryKey original = root.OpenSubKey(tweak.Path))
+                        {
+                            bool exists = original != null && original.GetValueNames().Contains(tweak.ValueName, StringComparer.OrdinalIgnoreCase);
+                            backup.SetValue("Target", target);
+                            backup.SetValue("Exists", exists ? 1 : 0);
+                            if (exists)
+                            {
+                                RegistryValueKind kind = original.GetValueKind(tweak.ValueName);
+                                backup.SetValue("Kind", (int)kind);
+                                backup.SetValue("Original", original.GetValue(tweak.ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames), kind);
+                            }
+                            backup.SetValue("Complete", 1); backup.Flush();
+                        }
+                    }
+                    using (RegistryKey key = root.CreateSubKey(tweak.Path))
+                    {
+                        if (key == null) throw new InvalidOperationException("Registry key unavailable");
+                        object value = tweak.Value; RegistryValueKind kind = tweak.Kind;
+                        if (undo)
+                        {
+                            value = Convert.ToInt32(backup.GetValue("Exists")) == 0 ? null : backup.GetValue("Original", null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+                            if (value != null) kind = (RegistryValueKind)Convert.ToInt32(backup.GetValue("Kind"));
+                        }
+                        if (value == null) key.DeleteValue(tweak.ValueName, false); else key.SetValue(tweak.ValueName, value, kind);
+                        key.Flush();
+                        object readBack = key.GetValue(tweak.ValueName, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
+                        bool equal = value is Array ? readBack is Array && ((Array)value).Cast<object>().SequenceEqual(((Array)readBack).Cast<object>()) : Equals(readBack, value);
+                        if (!equal || (value != null && key.GetValueKind(tweak.ValueName) != kind)) throw new IOException("Registry read-back did not match the requested value.");
+                        if (undo) backup.DeleteValue("Complete", false);
+                    }
+                }
             }
         }
 
-        private static void Run(string packed)
+        private static string Run(string packed)
         {
             int split = packed.IndexOf('|');
             string file = split < 0 ? packed : packed.Substring(0, split);
             string args = split < 0 ? "" : packed.Substring(split + 1);
-            ProcessStartInfo psi = new ProcessStartInfo(file, Environment.ExpandEnvironmentVariables(args));
+            ProcessStartInfo psi = new ProcessStartInfo(Path.Combine(Environment.SystemDirectory, file), Environment.ExpandEnvironmentVariables(args));
             psi.UseShellExecute = false; psi.CreateNoWindow = true;
-            using (Process p = Process.Start(psi))
+            psi.RedirectStandardOutput = true; psi.RedirectStandardError = true;
+            StringBuilder output = new StringBuilder();
+            using (Process p = new Process { StartInfo = psi })
             {
-                if (p == null) throw new InvalidOperationException("Could not start " + file);
-                p.WaitForExit(120000);
-                if (!p.HasExited) { p.Kill(); throw new TimeoutException(file + " timed out"); }
-                if (p.ExitCode != 0 && file.IndexOf("cmd",StringComparison.OrdinalIgnoreCase)<0)
-                    throw new InvalidOperationException(file + " returned " + p.ExitCode);
+                DataReceivedEventHandler capture = delegate(object sender, DataReceivedEventArgs e) { if (e.Data != null) lock (output) { if (output.Length < 24000) output.AppendLine(e.Data); } };
+                p.OutputDataReceived += capture; p.ErrorDataReceived += capture;
+                if (!p.Start()) throw new InvalidOperationException("Could not start " + file);
+                p.BeginOutputReadLine(); p.BeginErrorReadLine();
+                // Do not forcibly kill DISM or disk maintenance mid-operation.
+                p.WaitForExit();
+                if (p.ExitCode != 0) throw new InvalidOperationException(file + " returned " + p.ExitCode + ": " + output);
+                return file + ": " + output;
             }
         }
     }

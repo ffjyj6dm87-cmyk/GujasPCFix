@@ -31,7 +31,7 @@ namespace GujasPCFix
                     Name="Counter-Strike 2", ProcessName="cs2.exe", LaunchOptions="-novid +fps_max 0",
                     TweakIds=new[]{"game-mode","game-mode-allow","disable-dvr","disable-capture","hags","fullscreen","net-throttle","system-response","games-sf-io","games-gpu-priority","games-sf-priority","flush-dns"},
                     InstallHints=new[]{@"%ProgramFiles(x86)%\Steam\steamapps\common\Counter-Strike Global Offensive\game\bin\win64\cs2.exe",@"%ProgramFiles%\Steam\steamapps\common\Counter-Strike Global Offensive\game\bin\win64\cs2.exe"},
-                    Settings=new[]{"Use fullscreen mode","Enable NVIDIA Reflex or AMD Anti-Lag 2 when available","Set a stable FPS cap if frametimes fluctuate","Keep multicore rendering enabled"}
+                    Settings=new[]{"Compare fullscreen with your current display mode using the same scene","Use the game's supported latency setting for your GPU, if available","Compare capped and uncapped FPS using frame-time measurements","Lower particle and ambient-occlusion quality individually, keeping visibility settings suitable for play"}
                 },
                 new GameProfile {
                     Name="Fortnite", ProcessName="FortniteClient-Win64-Shipping.exe", LaunchOptions="Use DirectX 12 for modern GPUs, Performance Mode for weaker PCs",
@@ -47,9 +47,9 @@ namespace GujasPCFix
                 },
                 new GameProfile {
                     Name="Minecraft Java", ProcessName="javaw.exe", LaunchOptions="Use 4 GB RAM for vanilla, 6 to 8 GB for large modpacks",
-                    TweakIds=new[]{"game-mode","disable-dvr","disable-capture","hags","fullscreen","temp-user","directx-cache"},
+                    TweakIds=new[]{"game-mode","disable-dvr","disable-capture","temp-user"},
                     InstallHints=new[]{@"%APPDATA%\.minecraft",@"%LOCALAPPDATA%\Packages\Microsoft.4297127D64EC6_8wekyb3d8bbwe"},
-                    Settings=new[]{"Install Sodium for Fabric performance","Do not allocate all system RAM to Java","Lower simulation distance before render distance","Use G1GC unless a modpack documents another collector"}
+                    Settings=new[]{"Use the Java runtime required by your Minecraft version or modpack","Leave memory available for Windows and other applications when setting launcher RAM limits","Compare simulation distance and render distance separately","Use a mod profile compatible with your exact game and loader version"}
                 },
                 new GameProfile {
                     Name="Far Cry 6", ProcessName="FarCry6.exe", LaunchOptions="Use the in-game benchmark after every graphics change",

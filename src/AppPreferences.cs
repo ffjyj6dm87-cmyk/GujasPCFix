@@ -32,14 +32,14 @@ namespace GujasPCFix
             {
                 using (RegistryKey key = Registry.CurrentUser.CreateSubKey(KeyPath))
                 {
-                    if (key == null) return;
+                    if (key == null) throw new System.IO.IOException("Could not open application preferences.");
                     key.SetValue("ShowSplash", ShowSplash ? 1 : 0, RegistryValueKind.DWord);
                     key.SetValue("AutoRecommended", AutoRecommended ? 1 : 0, RegistryValueKind.DWord);
                     key.SetValue("ConfirmAdvanced", ConfirmAdvanced ? 1 : 0, RegistryValueKind.DWord);
                     key.SetValue("ShowResults", ShowResults ? 1 : 0, RegistryValueKind.DWord);
                 }
             }
-            catch { }
+            catch (System.Exception ex) { throw new System.IO.IOException("Could not save application preferences.", ex); }
         }
 
         private static bool Read(RegistryKey key, string name, bool fallback)

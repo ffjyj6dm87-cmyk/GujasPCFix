@@ -288,6 +288,9 @@ namespace GujasPCFix
                     {
                         string product = key.GetValue("ProductName") as string;
                         string build = key.GetValue("CurrentBuild") as string;
+                        int buildNumber;
+                        if (int.TryParse(build, out buildNumber) && buildNumber >= 22000 && product != null)
+                            product = product.Replace("Windows 10", "Windows 11");
                         if (!string.IsNullOrEmpty(product) && !string.IsNullOrEmpty(build))
                             return product + "  build " + build;
                         if (!string.IsNullOrEmpty(product))
@@ -330,8 +333,11 @@ namespace GujasPCFix
                 using (Process p = Process.Start(psi))
                 {
                     if (p == null) return "";
-                    string output = p.StandardOutput.ReadToEnd();
-                    p.WaitForExit(12000);
+                    var readOutput = p.StandardOutput.ReadToEndAsync();
+                    var readError = p.StandardError.ReadToEndAsync();
+                    if (!p.WaitForExit(12000)) { p.Kill(); return ""; }
+                    string output = readOutput.GetAwaiter().GetResult();
+                    readError.GetAwaiter().GetResult();
                     return output == null ? "" : output;
                 }
             }

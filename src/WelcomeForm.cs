@@ -26,7 +26,7 @@ namespace GujasPCFix
             ClientSize = new Size(560, 330);
             DoubleBuffered = true;
             BackColor = Color.Black;
-            Opacity = 0.93;
+            Opacity = 0.82;
             ShowInTaskbar = false;
             TopMost = true;
             Theme.LoadWallpaper();
@@ -84,7 +84,7 @@ namespace GujasPCFix
             Theme.Quality(e.Graphics);
             e.Graphics.Clear(Color.FromArgb(7, 12, 23));
             using (LinearGradientBrush glow = new LinearGradientBrush(ClientRectangle,
-                Color.FromArgb(42, 31, 89), Color.FromArgb(7, 12, 23), LinearGradientMode.ForwardDiagonal))
+                Color.FromArgb(12, 42, 78), Color.FromArgb(7, 15, 23), LinearGradientMode.ForwardDiagonal))
                 e.Graphics.FillRectangle(glow, ClientRectangle);
         }
 
@@ -115,16 +115,16 @@ namespace GujasPCFix
                 fadeOut = 1f - Ease((float)((t - 1100.0) / 300.0));
             }
 
-            using (SolidBrush glow = new SolidBrush(Color.FromArgb(ClampByte(42 * fadeOut), 124, 92, 255)))
+            using (SolidBrush glow = new SolidBrush(Color.FromArgb(ClampByte(42 * fadeOut), 36, 143, 255)))
                 g.FillEllipse(glow, Width / 2 - 155, 18, 310, 245);
 
-            using (Pen border = new Pen(Color.FromArgb(ClampByte(110 * fadeOut), 151, 126, 255), 1.2f))
+            using (Pen border = new Pen(Color.FromArgb(ClampByte(110 * fadeOut), 65, 145, 255), 1.2f))
             using (GraphicsPath borderPath = Glass.RoundRect(new Rectangle(1, 1, Width - 3, Height - 3), 27))
                 g.DrawPath(border, borderPath);
 
             Rectangle logo = new Rectangle(Width / 2 - 24, 43, 48, 48);
             using (GraphicsPath logoPath = Glass.RoundRect(logo, 13))
-            using (LinearGradientBrush logoFill = new LinearGradientBrush(logo, Color.FromArgb(124, 92, 255), Color.FromArgb(77, 208, 225), LinearGradientMode.ForwardDiagonal))
+            using (LinearGradientBrush logoFill = new LinearGradientBrush(logo, Color.FromArgb(22, 90, 255), Color.FromArgb(77, 208, 225), LinearGradientMode.ForwardDiagonal))
                 g.FillPath(logoFill, logoPath);
             using (Font logoFont = new Font("Segoe UI", 20f, FontStyle.Bold))
             using (SolidBrush logoText = new SolidBrush(Color.White))
@@ -147,7 +147,7 @@ namespace GujasPCFix
                 center.LineAlignment = StringAlignment.Center;
                 g.DrawString("GUJAS PC FIX", hero, white, new RectangleF(0, 105, Width, 48), center);
                 g.DrawString("PERFORMANCE CONTROL CENTER", brand, white, new RectangleF(0, 151, Width, 24), center);
-                g.DrawString("Loading hardware scan, game profiles and restore tools", subtle, mute, new RectangleF(0, 184, Width, 20), center);
+                g.DrawString("Welcome to your performance control center", subtle, mute, new RectangleF(0, 184, Width, 20), center);
             }
 
             Rectangle bar = new Rectangle((Width - 250) / 2, 238, 250, 7);
@@ -158,7 +158,7 @@ namespace GujasPCFix
             {
                 Rectangle fill = new Rectangle(bar.X, bar.Y, Math.Max(8, (int)(bar.Width * load)), bar.Height);
                 using (GraphicsPath fillPath = Glass.RoundRect(fill, 4))
-                using (LinearGradientBrush lg = new LinearGradientBrush(fill, Color.FromArgb(ClampByte(245 * fadeOut), 124, 92, 255), Color.FromArgb(ClampByte(220 * fadeOut), 34, 211, 238), LinearGradientMode.Horizontal))
+                using (LinearGradientBrush lg = new LinearGradientBrush(fill, Color.FromArgb(ClampByte(245 * fadeOut), 36, 143, 255), Color.FromArgb(ClampByte(220 * fadeOut), 34, 211, 238), LinearGradientMode.Horizontal))
                     g.FillPath(lg, fillPath);
             }
             using (Font version = new Font("Segoe UI", 8.5f))
@@ -166,7 +166,7 @@ namespace GujasPCFix
             using (StringFormat center = new StringFormat())
             {
                 center.Alignment = StringAlignment.Center;
-                g.DrawString("VERSION 2.0  •  WINDOWS 10 / 11", version, subtleBrush, new RectangleF(0, 272, Width, 20), center);
+                g.DrawString("VERSION 2.1  •  REFERENCE EDITION", version, subtleBrush, new RectangleF(0, 272, Width, 20), center);
             }
         }
 

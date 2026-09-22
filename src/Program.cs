@@ -18,7 +18,7 @@ namespace GujasPCFix
                     welcome.ShowDialog();
                 }
             }
-            Application.Run(new MainForm());
+            Application.Run(new ReferenceMainForm());
         }
     }
 }
