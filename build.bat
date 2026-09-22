@@ -13,7 +13,7 @@ if not exist assets\bg.jpg (
   echo Missing assets\bg.jpg
   exit /b 1
 )
-"%CSC%" /nologo /optimize+ /target:winexe /platform:anycpu /win32manifest:app.manifest /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Core.dll /res:assets\bg.jpg,GujasPCFix.bg.jpg /out:GujasPCFix.exe src\Program.cs src\MainForm.cs src\PcFixEngine.cs src\TweakCatalog.cs src\GameProfiles.cs src\GlassUi.cs src\HardwareAdvisor.cs src\Theme.cs src\WelcomeForm.cs src\NavChrome.cs
+"%CSC%" /nologo /optimize+ /target:winexe /platform:anycpu /win32manifest:app.manifest /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Core.dll /res:assets\bg.jpg,GujasPCFix.bg.jpg /out:GujasPCFix.exe src\Program.cs src\MainForm.cs src\PcFixEngine.cs src\TweakCatalog.cs src\GameProfiles.cs src\GlassUi.cs src\HardwareAdvisor.cs src\Theme.cs src\WelcomeForm.cs src\NavChrome.cs src\AppPreferences.cs
 if errorlevel 1 exit /b 1
 echo Built GujasPCFix.exe
 endlocal
