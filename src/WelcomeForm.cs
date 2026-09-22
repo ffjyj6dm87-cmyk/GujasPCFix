@@ -23,10 +23,10 @@ namespace GujasPCFix
             Text = "Gujas PC Fix";
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(460, 250);
+            ClientSize = new Size(520, 300);
             DoubleBuffered = true;
             BackColor = Color.Black;
-            Opacity = 0.82;
+            Opacity = 1.0;
             ShowInTaskbar = false;
             TopMost = true;
             Theme.LoadWallpaper();
@@ -82,12 +82,10 @@ namespace GujasPCFix
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             Theme.Quality(e.Graphics);
-            if (Theme.Wallpaper != null)
-                e.Graphics.DrawImage(Theme.Wallpaper, ClientRectangle);
-            else
-                e.Graphics.Clear(Color.FromArgb(20, 20, 22));
-            using (SolidBrush veil = new SolidBrush(Color.FromArgb(90, 8, 8, 10)))
-                e.Graphics.FillRectangle(veil, ClientRectangle);
+            e.Graphics.Clear(Color.FromArgb(8, 13, 24));
+            using (LinearGradientBrush glow = new LinearGradientBrush(ClientRectangle,
+                Color.FromArgb(35, 29, 74), Color.FromArgb(8, 13, 24), LinearGradientMode.ForwardDiagonal))
+                e.Graphics.FillRectangle(glow, ClientRectangle);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -117,12 +115,12 @@ namespace GujasPCFix
                 fadeOut = 1f - Ease((float)((t - 1100.0) / 300.0));
             }
 
-            using (SolidBrush dim = new SolidBrush(Color.FromArgb((int)(50 * fadeOut), 0, 0, 0)))
-                g.FillRectangle(dim, ClientRectangle);
+            using (SolidBrush glow = new SolidBrush(Color.FromArgb(ClampByte(38 * fadeOut), 124, 92, 255)))
+                g.FillEllipse(glow, Width / 2 - 130, 28, 260, 210);
 
             int a = ClampByte(welcomeAlpha * fadeOut * 255);
-            using (Font hero = new Font("Segoe UI Light", 28f, FontStyle.Regular, GraphicsUnit.Point))
-            using (Font brand = new Font("Segoe UI Semibold", 12f, FontStyle.Regular, GraphicsUnit.Point))
+            using (Font hero = new Font("Segoe UI", 25f, FontStyle.Bold, GraphicsUnit.Point))
+            using (Font brand = new Font("Segoe UI Semibold", 11f, FontStyle.Regular, GraphicsUnit.Point))
             using (Font subtle = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
             using (SolidBrush white = new SolidBrush(Color.FromArgb(a, 255, 255, 255)))
             using (SolidBrush mute = new SolidBrush(Color.FromArgb(ClampByte(welcomeAlpha * fadeOut * 190), 210, 210, 214)))
@@ -130,12 +128,12 @@ namespace GujasPCFix
             {
                 center.Alignment = StringAlignment.Center;
                 center.LineAlignment = StringAlignment.Center;
-                g.DrawString("Welcome", hero, white, new RectangleF(0, 48, Width, 48), center);
-                g.DrawString("Gujas PC Fix", brand, white, new RectangleF(0, 98, Width, 24), center);
-                g.DrawString("Preparing your system console", subtle, mute, new RectangleF(0, 128, Width, 20), center);
+                g.DrawString("GUJAS PC FIX", hero, white, new RectangleF(0, 70, Width, 48), center);
+                g.DrawString("PERFORMANCE CONTROL CENTER", brand, white, new RectangleF(0, 119, Width, 24), center);
+                g.DrawString("Preparing system scan and optimization tools", subtle, mute, new RectangleF(0, 153, Width, 20), center);
             }
 
-            Rectangle bar = new Rectangle((Width - 180) / 2, 178, 180, 6);
+            Rectangle bar = new Rectangle((Width - 220) / 2, 214, 220, 6);
             using (GraphicsPath track = Glass.RoundRect(bar, 4))
             using (SolidBrush trackBrush = new SolidBrush(Color.FromArgb(ClampByte(90 * fadeOut), 255, 255, 255)))
                 g.FillPath(trackBrush, track);
@@ -143,8 +141,15 @@ namespace GujasPCFix
             {
                 Rectangle fill = new Rectangle(bar.X, bar.Y, Math.Max(8, (int)(bar.Width * load)), bar.Height);
                 using (GraphicsPath fillPath = Glass.RoundRect(fill, 4))
-                using (LinearGradientBrush lg = new LinearGradientBrush(fill, Color.FromArgb(ClampByte(240 * fadeOut), 255, 255, 255), Color.FromArgb(ClampByte(160 * fadeOut), 200, 200, 205), LinearGradientMode.Horizontal))
+                using (LinearGradientBrush lg = new LinearGradientBrush(fill, Color.FromArgb(ClampByte(245 * fadeOut), 124, 92, 255), Color.FromArgb(ClampByte(220 * fadeOut), 34, 211, 238), LinearGradientMode.Horizontal))
                     g.FillPath(lg, fillPath);
+            }
+            using (Font version = new Font("Segoe UI", 8.5f))
+            using (SolidBrush subtleBrush = new SolidBrush(Color.FromArgb(ClampByte(150 * fadeOut), 139, 151, 174)))
+            using (StringFormat center = new StringFormat())
+            {
+                center.Alignment = StringAlignment.Center;
+                g.DrawString("VERSION 2.0", version, subtleBrush, new RectangleF(0, 244, Width, 20), center);
             }
         }
 

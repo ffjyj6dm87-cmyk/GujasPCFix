@@ -10,7 +10,10 @@ namespace GujasPCFix
         Home = 0,
         Optimize = 1,
         Tuner = 2,
-        Activity = 3
+        SystemInfo = 3,
+        Restore = 4,
+        Settings = 5,
+        Activity = 6
     }
 
     internal static class Icons
@@ -79,6 +82,21 @@ namespace GujasPCFix
                         new Point(x + w - 2, y + h / 2)
                     });
                 }
+                else if (name == "restore")
+                {
+                    g.DrawArc(pen, x + 3, y + 4, w - 7, h - 7, -55, 285);
+                    g.DrawLine(pen, x + 3, y + 4, x + 3, y + 11);
+                    g.DrawLine(pen, x + 3, y + 4, x + 10, y + 4);
+                }
+                else if (name == "settings")
+                {
+                    g.DrawEllipse(pen, x + 3, y + 3, w - 6, h - 6);
+                    g.DrawEllipse(pen, x + 8, y + 8, w - 16, h - 16);
+                    g.DrawLine(pen, x + w / 2, y, x + w / 2, y + 4);
+                    g.DrawLine(pen, x + w / 2, y + h - 4, x + w / 2, y + h);
+                    g.DrawLine(pen, x, y + h / 2, x + 4, y + h / 2);
+                    g.DrawLine(pen, x + w - 4, y + h / 2, x + w, y + h / 2);
+                }
             }
         }
     }
@@ -137,112 +155,95 @@ namespace GujasPCFix
         }
     }
 
-    internal sealed class MenuPane : GlassPanel
+    internal sealed class MenuPane : Panel
     {
         public AppPage Page = AppPage.Home;
-        public bool OptimizeOpen = true;
         public event EventHandler PageChanged;
 
         public MenuPane()
         {
-            Size = new Size(300, 720);
+            Size = new Size(238, 760);
+            BackColor = Color.FromArgb(13, 18, 31);
+            DoubleBuffered = true;
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            Glass.Liquid(e.Graphics, this, ClientRectangle,
-                Color.FromArgb(110, 10, 10, 12),
-                Color.FromArgb(75, 255, 255, 255),
-                Color.FromArgb(145, 230, 230, 235),
-                28);
             Graphics g = e.Graphics;
             Theme.Quality(g);
-            using (Font title = new Font("Segoe UI Semibold", 13f))
-            using (SolidBrush tb = new SolidBrush(Color.White))
+            g.Clear(Color.FromArgb(13, 18, 31));
+            using (SolidBrush accent = new SolidBrush(Color.FromArgb(124, 92, 255)))
+                g.FillRectangle(accent, 0, 0, 5, Height);
+            using (Font logo = new Font("Segoe UI", 18f, FontStyle.Bold))
+            using (Font version = new Font("Segoe UI", 8.5f, FontStyle.Bold))
+            using (SolidBrush white = new SolidBrush(Color.White))
+            using (SolidBrush violet = new SolidBrush(Color.FromArgb(157, 132, 255)))
             {
-                Icons.Draw(g, "spark", new Rectangle(22, 22, 16, 16), Color.White);
-                g.DrawString("Menu", title, tb, 44, 18);
+                g.DrawString("GUJAS", logo, white, 28, 25);
+                g.DrawString("PC FIX", logo, violet, 98, 25);
+                g.DrawString("VERSION 2.0", version, violet, 31, 62);
             }
+            using (Font section = new Font("Segoe UI", 8f, FontStyle.Bold))
+            using (SolidBrush muted = new SolidBrush(Color.FromArgb(103, 115, 139)))
+                g.DrawString("CONTROL CENTER", section, muted, 30, 102);
 
-            int y = 62;
-            y = DrawRow(g, y, "Home", AppPage.Home, false);
-            y = DrawRow(g, y, "Optimize", AppPage.Optimize, true);
-            if (OptimizeOpen)
+            int y = 128;
+            y = DrawRow(g, y, "Dashboard", "System overview", "home", AppPage.Home);
+            y = DrawRow(g, y, "PC Tweaks", "60 optimizations", "boost", AppPage.Optimize);
+            y = DrawRow(g, y, "Games Tweaker", "5 game profiles", "chip", AppPage.Tuner);
+            y = DrawRow(g, y, "System Info", "Hardware details", "pulse", AppPage.SystemInfo);
+            y = DrawRow(g, y, "Restore", "Undo changes", "restore", AppPage.Restore);
+            DrawRow(g, y, "Settings", "App preferences", "settings", AppPage.Settings);
+
+            using (SolidBrush card = new SolidBrush(Color.FromArgb(22, 29, 46)))
+            using (GraphicsPath path = Glass.RoundRect(new Rectangle(22, Height - 105, Width - 44, 76), 14))
+                g.FillPath(card, path);
+            using (SolidBrush green = new SolidBrush(Color.FromArgb(52, 211, 153))) g.FillEllipse(green, 38, Height - 79, 9, 9);
+            using (Font status = new Font("Segoe UI Semibold", 9.5f))
+            using (Font small = new Font("Segoe UI", 8f))
+            using (SolidBrush white = new SolidBrush(Color.FromArgb(235, 240, 250)))
+            using (SolidBrush muted = new SolidBrush(Color.FromArgb(135, 148, 172)))
             {
-                y = DrawChild(g, y, "60 performance tweaks");
-                y = DrawChild(g, y, "Search and categories");
-                y = DrawChild(g, y, "Restore Windows defaults");
+                g.DrawString("Protection active", status, white, 55, Height - 87);
+                g.DrawString("Restore points enabled", small, muted, 38, Height - 61);
             }
-            y = DrawRow(g, y, "Games Tweaker", AppPage.Tuner, false);
-            DrawRow(g, y, "Activity", AppPage.Activity, false);
         }
 
-        private int DrawRow(Graphics g, int y, string text, AppPage page, bool expander)
+        private int DrawRow(Graphics g, int y, string text, string sub, string icon, AppPage page)
         {
-            Rectangle pill = new Rectangle(16, y, Width - 32, 42);
+            Rectangle pill = new Rectangle(18, y, Width - 36, 58);
             bool on = Page == page;
-            using (GraphicsPath path = Glass.RoundRect(pill, 21))
+            using (GraphicsPath path = Glass.RoundRect(pill, 12))
             {
-                if (on)
-                {
-                    using (SolidBrush b = new SolidBrush(Color.FromArgb(240, 255, 255, 255)))
-                        g.FillPath(b, path);
-                }
+                using (SolidBrush b = new SolidBrush(on ? Color.FromArgb(36, 31, 70) : Color.FromArgb(0, 13, 18, 31)))
+                    g.FillPath(b, path);
             }
-            Color fg = on ? Color.FromArgb(18, 18, 20) : Color.FromArgb(235, 235, 238);
-            using (Font font = new Font("Segoe UI", 10.5f, on ? FontStyle.Bold : FontStyle.Regular))
+            if (on) using (SolidBrush bar = new SolidBrush(Color.FromArgb(124, 92, 255))) g.FillRectangle(bar, 18, y + 12, 4, 34);
+            Color fg = on ? Color.White : Color.FromArgb(195, 204, 220);
+            Icons.Draw(g, icon, new Rectangle(36, y + 18, 20, 20), on ? Color.FromArgb(157,132,255) : Color.FromArgb(123,137,161));
+            using (Font font = new Font("Segoe UI Semibold", 10f))
+            using (Font subFont = new Font("Segoe UI", 8f))
             using (SolidBrush brush = new SolidBrush(fg))
+            using (SolidBrush subBrush = new SolidBrush(Color.FromArgb(105, 119, 143)))
             {
-                g.DrawString(text, font, brush, 36, y + 10);
+                g.DrawString(text, font, brush, 68, y + 10);
+                g.DrawString(sub, subFont, subBrush, 68, y + 32);
             }
-            if (expander)
-            {
-                string mark = OptimizeOpen ? "-" : "+";
-                using (Font font = new Font("Segoe UI", 12f))
-                using (SolidBrush brush = new SolidBrush(fg))
-                    g.DrawString(mark, font, brush, Width - 48, y + 8);
-            }
-            return y + 48;
-        }
-
-        private int DrawChild(Graphics g, int y, string text)
-        {
-            Rectangle pill = new Rectangle(40, y, Width - 56, 34);
-            using (GraphicsPath path = Glass.RoundRect(pill, 17))
-            using (SolidBrush b = new SolidBrush(Color.FromArgb(Page == AppPage.Optimize ? 40 : 18, 255, 255, 255)))
-                g.FillPath(b, path);
-            using (Font font = new Font("Segoe UI", 9f))
-            using (SolidBrush brush = new SolidBrush(Color.FromArgb(210, 210, 214)))
-                g.DrawString(text, font, brush, 56, y + 8);
-            return y + 38;
+            return y + 66;
         }
 
         protected override void OnMouseClick(MouseEventArgs e)
         {
-            int y = 62;
-            if (Hit(e, y)) SetPage(AppPage.Home);
-            y += 48;
-            Rectangle opt = new Rectangle(16, y, Width - 32, 42);
-            if (opt.Contains(e.Location))
-            {
-                if (e.X > Width - 56)
-                    OptimizeOpen = !OptimizeOpen;
-                else
-                    SetPage(AppPage.Optimize);
-                Invalidate();
-                return;
-            }
-            y += 48;
-            if (OptimizeOpen) y += 38 * 3;
-            if (Hit(e, y)) SetPage(AppPage.Tuner);
-            y += 48;
-            if (Hit(e, y)) SetPage(AppPage.Activity);
+            int y = 128;
+            AppPage[] pages = { AppPage.Home, AppPage.Optimize, AppPage.Tuner, AppPage.SystemInfo, AppPage.Restore, AppPage.Settings };
+            for (int i = 0; i < pages.Length; i++, y += 66)
+                if (Hit(e, y)) { SetPage(pages[i]); break; }
             base.OnMouseClick(e);
         }
 
         private bool Hit(MouseEventArgs e, int y)
         {
-            return new Rectangle(16, y, Width - 32, 42).Contains(e.Location);
+            return new Rectangle(18, y, Width - 36, 58).Contains(e.Location);
         }
 
         private void SetPage(AppPage page)

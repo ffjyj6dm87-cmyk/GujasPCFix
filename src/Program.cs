@@ -10,9 +10,13 @@ namespace GujasPCFix
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            using (WelcomeForm welcome = new WelcomeForm())
+            AppPreferences.Load();
+            if (AppPreferences.ShowSplash)
             {
-                welcome.ShowDialog();
+                using (WelcomeForm welcome = new WelcomeForm())
+                {
+                    welcome.ShowDialog();
+                }
             }
             Application.Run(new MainForm());
         }

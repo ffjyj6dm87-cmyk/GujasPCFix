@@ -102,11 +102,17 @@ namespace GujasPCFix
 
         protected override void OnPaint(PaintEventArgs e)
         {
-            Glass.Liquid(e.Graphics, this, ClientRectangle,
-                Color.FromArgb(120, 8, 8, 10),
-                Color.FromArgb(85, 255, 255, 255),
-                Color.FromArgb(150, 230, 230, 235),
-                20);
+            Theme.Quality(e.Graphics);
+            Rectangle r = ClientRectangle;
+            r.Width -= 1;
+            r.Height -= 1;
+            using (GraphicsPath path = Glass.RoundRect(r, 14))
+            using (SolidBrush fill = new SolidBrush(Color.FromArgb(18, 25, 42)))
+            using (Pen border = new Pen(Color.FromArgb(39, 50, 74)))
+            {
+                e.Graphics.FillPath(fill, path);
+                e.Graphics.DrawPath(border, path);
+            }
             base.OnPaint(e);
         }
     }
@@ -164,22 +170,21 @@ namespace GujasPCFix
 
         protected override void OnPaint(PaintEventArgs pevent)
         {
-            Color tint;
-            Color sheen;
-            Color edge;
-            if (Emphasized)
+            Theme.Quality(pevent.Graphics);
+            Color fill = Emphasized
+                ? (_down ? Color.FromArgb(96, 68, 218) : (_hot ? Color.FromArgb(139, 107, 255) : Color.FromArgb(124, 92, 255)))
+                : (_down ? Color.FromArgb(26, 35, 54) : (_hot ? Color.FromArgb(39, 50, 74) : Color.FromArgb(27, 36, 56)));
+            Color edge = Emphasized ? Color.FromArgb(151, 126, 255) : Color.FromArgb(50, 62, 87);
+            Rectangle r = ClientRectangle;
+            r.Width -= 1;
+            r.Height -= 1;
+            using (GraphicsPath path = Glass.RoundRect(r, 10))
+            using (SolidBrush brush = new SolidBrush(fill))
+            using (Pen pen = new Pen(edge))
             {
-                tint = Color.FromArgb(_down ? 160 : (_hot ? 130 : 100), 210, 210, 220);
-                sheen = Color.FromArgb(150, 255, 255, 255);
-                edge = Color.FromArgb(180, 245, 245, 250);
+                pevent.Graphics.FillPath(brush, path);
+                pevent.Graphics.DrawPath(pen, path);
             }
-            else
-            {
-                tint = Color.FromArgb(_down ? 140 : (_hot ? 110 : 80), 255, 255, 255);
-                sheen = Color.FromArgb(130, 255, 255, 255);
-                edge = Color.FromArgb(160, 235, 235, 240);
-            }
-            Glass.Liquid(pevent.Graphics, this, ClientRectangle, tint, sheen, edge, Height / 2);
             pevent.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             TextRenderer.DrawText(pevent.Graphics, Text, Font, ClientRectangle, Color.White,
                 TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);

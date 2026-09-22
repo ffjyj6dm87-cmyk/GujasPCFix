@@ -1,7 +1,8 @@
 using System;
-using System.Drawing;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -9,593 +10,152 @@ namespace GujasPCFix
 {
     internal sealed class MainForm : Form, IGlassHost
     {
-        private static readonly Color Fg = Color.FromArgb(250, 250, 252);
-        private static readonly Color Muted = Color.FromArgb(176, 176, 182);
-        private Bitmap _frost;
+        private static readonly Color Bg=Color.FromArgb(8,13,24), Card=Color.FromArgb(18,25,42), CardAlt=Color.FromArgb(22,30,49), Edge=Color.FromArgb(39,50,74), Accent=Color.FromArgb(124,92,255), Fg=Color.FromArgb(244,247,252), Muted=Color.FromArgb(139,151,174), Green=Color.FromArgb(52,211,153);
+        public Image Frost { get { return null; } }
 
-        public Image Frost
-        {
-            get { return _frost; }
-        }
-
-        private readonly IconRail _rail = new IconRail();
-        private readonly MenuPane _menu = new MenuPane();
-        private readonly GlassPanel _content = new GlassPanel();
-        private readonly Panel _pageHome = MakePage();
-        private readonly Panel _pageOptimize = MakePage();
-        private readonly Panel _pageTuner = MakePage();
-        private readonly Panel _pageActivity = MakePage();
-
-        private readonly Label _cpuValue = MakeValue();
-        private readonly Label _gpuValue = MakeValue();
-        private readonly Label _ramValue = MakeValue();
-        private readonly Label _diskValue = MakeValue();
-        private readonly Label _junkValue = MakeValue();
-        private readonly Label _osValue = MakeValue();
-        private readonly Label _powerValue = MakeMuted();
-        private readonly CheckBox _cleanTemp = MakeCheck("Clean temporary files", true);
-        private readonly CheckBox _recycle = MakeCheck("Empty Recycle Bin", true);
-        private readonly CheckBox _dns = MakeCheck("Flush DNS cache", true);
-        private readonly CheckBox _power = MakeCheck("High performance power plan", true);
-        private readonly CheckBox _game = MakeCheck("Enable Game Mode", true);
-        private readonly CheckBox _visuals = MakeCheck("Best-performance visual effects", false);
-        private readonly CheckBox _thumbs = MakeCheck("Clear thumbnail cache", true);
-        private readonly CheckBox _gpuSched = MakeCheck("GPU hardware scheduling", true);
-        private readonly CheckBox _netTune = MakeCheck("Game network profile", true);
-        private readonly TextBox _cpuBox = MakeField();
-        private readonly TextBox _gpuBox = MakeField();
-        private readonly TextBox _tuneTips = MakeMultiline();
-        private readonly ComboBox _gameProfile = new ComboBox();
-        private readonly List<GameProfile> _gameProfiles = GameProfiles.Create();
-        private readonly TextBox _log = MakeMultiline();
-        private readonly GlassButton _scanButton = new GlassButton();
-        private readonly GlassButton _boostButton = new GlassButton();
-        private readonly GlassButton _restoreButton = new GlassButton();
-        private readonly GlassButton _recommendedButton = new GlassButton();
-        private readonly GlassButton _tuneButton = new GlassButton();
-        private readonly TextBox _tweakSearch = MakeField();
-        private readonly ComboBox _tweakCategory = new ComboBox();
-        private readonly CheckedListBox _tweakList = new CheckedListBox();
-        private readonly Label _tweakDescription = MakeMuted();
-        private readonly List<TweakDefinition> _tweaks = TweakCatalog.Create();
+        private readonly MenuPane _menu=new MenuPane();
+        private readonly Panel _content=new Panel(), _pageHome=MakePage(), _pageOptimize=MakePage(), _pageTuner=MakePage(), _pageSystem=MakePage(), _pageRestore=MakePage(), _pageSettings=MakePage();
+        private readonly Label _cpuValue=MakeValue(), _gpuValue=MakeValue(), _ramValue=MakeValue(), _diskValue=MakeValue(), _junkValue=MakeValue(), _osValue=MakeValue();
+        private readonly Label _powerValue=MakeMuted(), _scanStatus=MakeMuted(), _restoreStatus=MakeMuted(), _tweakDescription=MakeMuted(), _selectionStatus=MakeMuted();
+        private readonly TextBox _systemDetails=MakeMultiline(), _log=MakeMultiline(), _tweakSearch=MakeField();
+        private readonly ComboBox _tweakCategory=new ComboBox();
+        private readonly CheckedListBox _tweakList=new CheckedListBox();
+        private readonly List<GameProfile> _gameProfiles=GameProfiles.Create();
+        private readonly List<TweakDefinition> _tweaks=TweakCatalog.Create();
+        private readonly GlassButton _scanButton=new GlassButton(), _quickButton=new GlassButton(), _boostButton=new GlassButton(), _restoreButton=new GlassButton(), _recommendedButton=new GlassButton(), _restoreAllButton=new GlassButton(), _saveSettingsButton=new GlassButton();
+        private readonly CheckBox _showSplash=MakeCheck("Show startup screen",true), _autoRecommended=MakeCheck("Select recommended tweaks on launch",false), _confirmAdvanced=MakeCheck("Confirm advanced system tweaks",true), _showResults=MakeCheck("Show result summary after changes",true);
         private bool _busy;
-        private int _ramGb;
-        private bool _filledHardware;
 
         public MainForm()
         {
-            Text = "Gujas PC Fix";
-            StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(1280, 780);
-            FormBorderStyle = FormBorderStyle.FixedSingle;
-            MaximizeBox = false;
-            Font = new Font("Segoe UI", 10.5f);
-            ForeColor = Fg;
-            DoubleBuffered = true;
-            BackColor = Color.Black;
-            LoadBackdrop();
-
-            _rail.Location = new Point(18, 24);
-            _rail.Size = new Size(68, 732);
-            _rail.PageChanged += delegate { SyncNav(_rail.Page); };
-
-            _menu.Location = new Point(98, 24);
-            _menu.Size = new Size(300, 732);
-            _menu.PageChanged += delegate { SyncNav(_menu.Page); };
-
-            _content.Location = new Point(414, 24);
-            _content.Size = new Size(848, 732);
-
-            BuildHome();
-            BuildOptimize();
-            BuildTuner();
-            BuildActivity();
-
-            _content.Controls.Add(_pageActivity);
-            _content.Controls.Add(_pageTuner);
-            _content.Controls.Add(_pageOptimize);
-            _content.Controls.Add(_pageHome);
-
-            Controls.Add(_rail);
-            Controls.Add(_menu);
-            Controls.Add(_content);
-
-            ShowPage(AppPage.Home);
-            Shown += delegate { RunScan(); };
+            Text="Gujas PC Fix 2.0"; StartPosition=FormStartPosition.CenterScreen; ClientSize=new Size(1380,840); MinimumSize=new Size(1280,780); FormBorderStyle=FormBorderStyle.FixedSingle; MaximizeBox=false; Font=new Font("Segoe UI",10f); ForeColor=Fg; BackColor=Bg; DoubleBuffered=true;
+            _menu.Location=new Point(16,16); _menu.Size=new Size(238,808); _menu.PageChanged+=delegate { ShowPage(_menu.Page); };
+            _content.Location=new Point(270,16); _content.Size=new Size(1094,808); _content.BackColor=Bg;
+            BuildHome(); BuildOptimize(); BuildTuner(); BuildSystemInfo(); BuildRestore(); BuildSettings();
+            _content.Controls.Add(_pageSettings); _content.Controls.Add(_pageRestore); _content.Controls.Add(_pageSystem); _content.Controls.Add(_pageTuner); _content.Controls.Add(_pageOptimize); _content.Controls.Add(_pageHome);
+            Controls.Add(_menu); Controls.Add(_content); LoadPreferences(); ShowPage(AppPage.Home); Shown+=delegate { RunScan(); };
         }
 
-        protected override CreateParams CreateParams
-        {
-            get
-            {
-                CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x02000000;
-                return cp;
-            }
-        }
-
-        private void SyncNav(AppPage page)
-        {
-            _rail.Page = page;
-            _menu.Page = page;
-            _rail.Invalidate();
-            _menu.Invalidate();
-            ShowPage(page);
-        }
-
-        private void ShowPage(AppPage page)
-        {
-            _pageHome.Visible = page == AppPage.Home;
-            _pageOptimize.Visible = page == AppPage.Optimize;
-            _pageTuner.Visible = page == AppPage.Tuner;
-            _pageActivity.Visible = page == AppPage.Activity;
-        }
-
-        private void LoadBackdrop()
-        {
-            Theme.LoadWallpaper();
-            BackgroundImage = Theme.Wallpaper;
-            BackgroundImageLayout = ImageLayout.Stretch;
-            if (_frost != null) _frost.Dispose();
-            _frost = Theme.MakeFrost(ClientSize.Width, ClientSize.Height);
-        }
-
-        protected override void OnFormClosed(FormClosedEventArgs e)
-        {
-            if (_frost != null) _frost.Dispose();
-            base.OnFormClosed(e);
-        }
+        protected override CreateParams CreateParams { get { CreateParams cp=base.CreateParams; cp.ExStyle|=0x02000000; return cp; } }
+        private void ShowPage(AppPage page) { _menu.Page=page; _menu.Invalidate(); _pageHome.Visible=page==AppPage.Home; _pageOptimize.Visible=page==AppPage.Optimize; _pageTuner.Visible=page==AppPage.Tuner; _pageSystem.Visible=page==AppPage.SystemInfo; _pageRestore.Visible=page==AppPage.Restore; _pageSettings.Visible=page==AppPage.Settings; }
+        private void Go(AppPage page) { ShowPage(page); }
 
         private void BuildHome()
         {
-            _pageHome.Controls.Add(Heading("Gujas PC Fix", 24, 20, 28));
-            _pageHome.Controls.Add(Sub("Overview of this machine. Scan, then Optimize when you are ready.", 26, 62));
-            _pageHome.Controls.Add(StatCard("Processor", _cpuValue, 24, 100));
-            _pageHome.Controls.Add(StatCard("Graphics", _gpuValue, 292, 100));
-            _pageHome.Controls.Add(StatCard("Memory", _ramValue, 560, 100));
-            _pageHome.Controls.Add(StatCard("Storage", _diskValue, 24, 250));
-            _pageHome.Controls.Add(StatCard("Reclaimable", _junkValue, 292, 250));
-            _pageHome.Controls.Add(StatCard("Windows", _osValue, 560, 250));
-            _powerValue.Location = new Point(28, 410);
-            _pageHome.Controls.Add(_powerValue);
-            _scanButton.Text = "Scan system";
-            _scanButton.Size = new Size(168, 48);
-            _scanButton.Location = new Point(24, 640);
-            _scanButton.Click += delegate { RunScan(); };
-            _pageHome.Controls.Add(_scanButton);
+            AddPageTitle(_pageHome,"Dashboard","A clear overview of your PC, performance status and quick actions.");
+            Panel hero=FlatCard(24,92,1046,142,Accent);
+            hero.Controls.Add(Heading("Your PC is ready to optimize",28,22,23,FontStyle.Bold)); hero.Controls.Add(Sub("Scan hardware, review safe recommendations and apply only the changes you choose.",30,61));
+            _scanStatus.Text="System scan is starting..."; _scanStatus.Location=new Point(30,94); hero.Controls.Add(_scanStatus);
+            _quickButton.Text="Quick optimize"; _quickButton.Emphasized=true; _quickButton.Size=new Size(174,46); _quickButton.Location=new Point(842,48); _quickButton.Click+=delegate { SelectRecommended(); Go(AppPage.Optimize); }; hero.Controls.Add(_quickButton); _pageHome.Controls.Add(hero);
+            _pageHome.Controls.Add(StatCard("PROCESSOR",_cpuValue,24,254,Color.FromArgb(96,165,250))); _pageHome.Controls.Add(StatCard("GRAPHICS",_gpuValue,380,254,Color.FromArgb(167,139,250))); _pageHome.Controls.Add(StatCard("MEMORY",_ramValue,736,254,Green));
+            _pageHome.Controls.Add(StatCard("STORAGE",_diskValue,24,416,Color.FromArgb(251,191,36))); _pageHome.Controls.Add(StatCard("RECLAIMABLE",_junkValue,380,416,Color.FromArgb(244,114,182))); _pageHome.Controls.Add(StatCard("WINDOWS",_osValue,736,416,Color.FromArgb(34,211,238)));
+            Panel footer=FlatCard(24,590,1046,142,Green); footer.Controls.Add(Heading("System health",24,18,14,FontStyle.Bold)); _powerValue.Location=new Point(24,52); footer.Controls.Add(_powerValue); footer.Controls.Add(Sub("Recommended tweaks are conservative and every registry change has a restore value.",24,82));
+            _scanButton.Text="Refresh scan"; _scanButton.Size=new Size(154,42); _scanButton.Location=new Point(860,48); _scanButton.Click+=delegate { RunScan(); }; footer.Controls.Add(_scanButton); _pageHome.Controls.Add(footer);
         }
 
         private void BuildOptimize()
         {
-            _pageOptimize.Controls.Add(Heading("Performance Tweaks", 24, 16, 26));
-            _pageOptimize.Controls.Add(Sub("60 transparent tweaks. Select only what you want, every registry change can be restored.", 26, 56));
-
-            _tweakSearch.Location = new Point(24, 88);
-            _tweakSearch.Size = new Size(330, 30);
-            _tweakSearch.TextChanged += delegate { RefreshTweakList(); };
-            _pageOptimize.Controls.Add(_tweakSearch);
-
-            _tweakCategory.Location = new Point(370, 88);
-            _tweakCategory.Size = new Size(190, 30);
-            _tweakCategory.DropDownStyle = ComboBoxStyle.DropDownList;
-            _tweakCategory.BackColor = Color.FromArgb(18, 18, 20);
-            _tweakCategory.ForeColor = Fg;
-            _tweakCategory.Items.Add("All categories");
-            foreach (string category in _tweaks.Select(x => x.Category).Distinct()) _tweakCategory.Items.Add(category);
-            _tweakCategory.SelectedIndex = 0;
-            _tweakCategory.SelectedIndexChanged += delegate { RefreshTweakList(); };
-            _pageOptimize.Controls.Add(_tweakCategory);
-
-            _recommendedButton.Text = "Recommended";
-            _recommendedButton.Size = new Size(160, 38);
-            _recommendedButton.Location = new Point(574, 84);
-            _recommendedButton.Click += delegate { SelectRecommended(); };
-            _pageOptimize.Controls.Add(_recommendedButton);
-
-            _tweakList.Location = new Point(24, 132);
-            _tweakList.Size = new Size(790, 398);
-            _tweakList.BackColor = Color.FromArgb(12, 12, 14);
-            _tweakList.ForeColor = Fg;
-            _tweakList.BorderStyle = BorderStyle.None;
-            _tweakList.CheckOnClick = true;
-            _tweakList.Font = new Font("Segoe UI", 10.5f);
-            _tweakList.ItemCheck += delegate(object sender, ItemCheckEventArgs e)
-            {
-                BeginInvoke(new Action(UpdateTweakSummary));
-            };
-            _tweakList.SelectedIndexChanged += delegate
-            {
-                TweakDefinition item = _tweakList.SelectedItem as TweakDefinition;
-                _tweakDescription.Text = item == null ? "Select a tweak to read what it changes." : item.Description + (item.RestartRequired ? "  Restart required." : "");
-            };
-            _pageOptimize.Controls.Add(_tweakList);
-
-            _tweakDescription.Location = new Point(28, 542);
-            _tweakDescription.MaximumSize = new Size(780, 46);
-            _pageOptimize.Controls.Add(_tweakDescription);
-
-            _boostButton.Text = "Apply selected";
-            _boostButton.Emphasized = true;
-            _boostButton.Size = new Size(190, 48);
-            _boostButton.Location = new Point(24, 630);
-            _boostButton.Click += delegate { RunBoost(); };
-            _pageOptimize.Controls.Add(_boostButton);
-
-            _restoreButton.Text = "Restore defaults";
-            _restoreButton.Size = new Size(190, 48);
-            _restoreButton.Location = new Point(228, 630);
-            _restoreButton.Click += delegate { RestoreTweaks(); };
-            _pageOptimize.Controls.Add(_restoreButton);
-            RefreshTweakList();
-        }
-
-        private void RefreshTweakList()
-        {
-            if (_tweakCategory.SelectedIndex < 0) return;
-            HashSet<string> selected = new HashSet<string>();
-            foreach (object value in _tweakList.CheckedItems)
-            {
-                TweakDefinition old = value as TweakDefinition;
-                if (old != null) selected.Add(old.Id);
-            }
-            string query = _tweakSearch.Text.Trim();
-            string category = _tweakCategory.SelectedItem == null ? "All categories" : _tweakCategory.SelectedItem.ToString();
-            _tweakList.BeginUpdate();
-            _tweakList.Items.Clear();
-            foreach (TweakDefinition tweak in _tweaks)
-            {
-                if (category != "All categories" && tweak.Category != category) continue;
-                if (query.Length > 0 && tweak.Name.IndexOf(query, StringComparison.OrdinalIgnoreCase) < 0 && tweak.Description.IndexOf(query, StringComparison.OrdinalIgnoreCase) < 0) continue;
-                _tweakList.Items.Add(tweak, selected.Contains(tweak.Id));
-            }
-            _tweakList.EndUpdate();
-            UpdateTweakSummary();
-        }
-
-        private void SelectRecommended()
-        {
-            for (int i = 0; i < _tweakList.Items.Count; i++)
-            {
-                TweakDefinition tweak = (TweakDefinition)_tweakList.Items[i];
-                _tweakList.SetItemChecked(i, tweak.Recommended);
-            }
-            UpdateTweakSummary();
-        }
-
-        private void UpdateTweakSummary()
-        {
-            int restart = 0;
-            foreach (object value in _tweakList.CheckedItems) if (((TweakDefinition)value).RestartRequired) restart++;
-            _recommendedButton.Text = _tweakList.CheckedItems.Count + " selected" + (restart > 0 ? "  • " + restart + " restart" : "");
+            AddPageTitle(_pageOptimize,"PC Tweaks","60 transparent optimizations, grouped by purpose and reversible where applicable.");
+            _pageOptimize.Controls.Add(InfoChip("60 TWEAKS",24,86,Accent)); _pageOptimize.Controls.Add(InfoChip("6 CATEGORIES",160,86,Color.FromArgb(34,211,238))); _pageOptimize.Controls.Add(InfoChip("RESTORE READY",324,86,Green));
+            _tweakSearch.Location=new Point(24,132); _tweakSearch.Size=new Size(376,30); _tweakSearch.TextChanged+=delegate { RefreshTweakList(); }; _pageOptimize.Controls.Add(_tweakSearch);
+            _tweakCategory.Location=new Point(416,132); _tweakCategory.Size=new Size(210,30); _tweakCategory.DropDownStyle=ComboBoxStyle.DropDownList; _tweakCategory.FlatStyle=FlatStyle.Flat; _tweakCategory.BackColor=CardAlt; _tweakCategory.ForeColor=Fg; _tweakCategory.Items.Add("All categories"); foreach(string category in _tweaks.Select(x=>x.Category).Distinct()) _tweakCategory.Items.Add(category); _tweakCategory.SelectedIndex=0; _tweakCategory.SelectedIndexChanged+=delegate { RefreshTweakList(); }; _pageOptimize.Controls.Add(_tweakCategory);
+            _recommendedButton.Text="Select recommended"; _recommendedButton.Size=new Size(190,38); _recommendedButton.Location=new Point(644,127); _recommendedButton.Click+=delegate { SelectRecommended(); }; _pageOptimize.Controls.Add(_recommendedButton);
+            _tweakList.Location=new Point(24,180); _tweakList.Size=new Size(810,438); _tweakList.BackColor=Card; _tweakList.ForeColor=Fg; _tweakList.BorderStyle=BorderStyle.FixedSingle; _tweakList.CheckOnClick=true; _tweakList.Font=new Font("Segoe UI",10.25f); _tweakList.ItemHeight=28;
+            _tweakList.ItemCheck+=delegate { BeginInvoke(new Action(UpdateTweakSummary)); }; _tweakList.SelectedIndexChanged+=delegate { TweakDefinition item=_tweakList.SelectedItem as TweakDefinition; _tweakDescription.Text=item==null?"Select a tweak to see exactly what it changes.":item.Description+(item.RestartRequired?"  Restart required.":""); }; _pageOptimize.Controls.Add(_tweakList);
+            Panel side=FlatCard(850,180,220,438,Accent); side.Controls.Add(Heading("Selection",18,18,14,FontStyle.Bold)); _selectionStatus.Location=new Point(18,54); _selectionStatus.MaximumSize=new Size(182,80); side.Controls.Add(_selectionStatus); side.Controls.Add(Sub("Recommended",18,130)); side.Controls.Add(Metric(_tweaks.Count(x=>x.Recommended).ToString(),18,153)); side.Controls.Add(Sub("Advanced",18,212)); side.Controls.Add(Metric(_tweaks.Count(x=>x.Risk==TweakRisk.Advanced).ToString(),18,235)); side.Controls.Add(Sub("Restart items",18,294)); side.Controls.Add(Metric(_tweaks.Count(x=>x.RestartRequired).ToString(),18,317)); _pageOptimize.Controls.Add(side);
+            _tweakDescription.Location=new Point(28,632); _tweakDescription.MaximumSize=new Size(800,44); _pageOptimize.Controls.Add(_tweakDescription);
+            _boostButton.Text="Apply selected"; _boostButton.Emphasized=true; _boostButton.Size=new Size(190,48); _boostButton.Location=new Point(24,698); _boostButton.Click+=delegate { RunBoost(); }; _pageOptimize.Controls.Add(_boostButton);
+            _restoreButton.Text="Restore selected"; _restoreButton.Size=new Size(190,48); _restoreButton.Location=new Point(228,698); _restoreButton.Click+=delegate { RestoreTweaks(false); }; _pageOptimize.Controls.Add(_restoreButton); RefreshTweakList();
         }
 
         private void BuildTuner()
         {
-            _pageTuner.Controls.Add(Heading("Games Tweaker", 24, 20, 26));
-            _pageTuner.Controls.Add(Sub("Choose a game to load safe Windows tweaks and tested in-game recommendations.", 26, 62));
-            _pageTuner.Controls.Add(SmallLabel("Game profile", 26, 110));
-            _gameProfile.Location = new Point(26, 136);
-            _gameProfile.Size = new Size(360, 32);
-            _gameProfile.DropDownStyle = ComboBoxStyle.DropDownList;
-            _gameProfile.BackColor = Color.FromArgb(18,18,20);
-            _gameProfile.ForeColor = Fg;
-            foreach (GameProfile profile in _gameProfiles) _gameProfile.Items.Add(profile);
-            _gameProfile.SelectedIndexChanged += delegate { PreviewGameProfile(); };
-            _pageTuner.Controls.Add(_gameProfile);
-            _tuneButton.Text = "Load game tweaks";
-            _tuneButton.Size = new Size(200, 44);
-            _tuneButton.Location = new Point(410, 130);
-            _tuneButton.Click += delegate { ApplyTuner(); };
-            _pageTuner.Controls.Add(_tuneButton);
-            _tuneTips.Location = new Point(26, 200);
-            _tuneTips.Size = new Size(790, 410);
-            _tuneTips.Text = "Select Counter-Strike 2, Fortnite, Rainbow Six Siege, Minecraft or Far Cry 6.";
-            _pageTuner.Controls.Add(_tuneTips);
-            _gameProfile.SelectedIndex = 0;
+            AddPageTitle(_pageTuner,"Games Tweaker","Dedicated profiles with relevant Windows and in-game recommendations for each title."); int[] xs={24,548};
+            for(int i=0;i<_gameProfiles.Count;i++) _pageTuner.Controls.Add(GameCard(_gameProfiles[i],xs[i%2],98+(i/2)*204,i));
         }
 
-        private void BuildActivity()
+        private Control GameCard(GameProfile profile,int x,int y,int index)
         {
-            _pageActivity.Controls.Add(Heading("Activity", 24, 20, 26));
-            _pageActivity.Controls.Add(Sub("Technical log of each pass so you can see what actually ran.", 26, 62));
-            _log.Location = new Point(24, 100);
-            _log.Size = new Size(792, 580);
-            _pageActivity.Controls.Add(_log);
+            Color[] colors={Color.FromArgb(96,165,250),Color.FromArgb(139,92,246),Color.FromArgb(34,211,238),Green,Color.FromArgb(251,146,60)}; Panel card=FlatCard(x,y,500,184,colors[index]);
+            Label badge=new Label(); badge.Text=profile.Name.Substring(0,1); badge.TextAlign=ContentAlignment.MiddleCenter; badge.Font=new Font("Segoe UI",18f,FontStyle.Bold); badge.ForeColor=Color.White; badge.BackColor=colors[index]; badge.Location=new Point(20,20); badge.Size=new Size(48,48); card.Controls.Add(badge);
+            card.Controls.Add(Heading(profile.Name,82,18,15,FontStyle.Bold)); string found=profile.FindInstall(); Label status=Sub(found==null?"Not detected automatically":"Installed and detected",84,49); status.ForeColor=found==null?Muted:Green; card.Controls.Add(status);
+            Label detail=Sub(ProfileSummary(profile.Name),22,82); detail.MaximumSize=new Size(452,42); card.Controls.Add(detail); Label count=SmallLabel(profile.TweakIds.Length+" matching tweaks",22,139); card.Controls.Add(count);
+            GlassButton load=new GlassButton(); load.Text="Open profile"; load.Size=new Size(142,38); load.Location=new Point(336,128); load.Click+=delegate { ShowGameProfile(profile); }; card.Controls.Add(load); return card;
         }
 
-        private static Panel MakePage()
+        private static string ProfileSummary(string name) { if(name.IndexOf("Counter",StringComparison.OrdinalIgnoreCase)>=0)return "Competitive FPS, lower input latency and clean fullscreen behavior."; if(name=="Fortnite")return "Rendering mode, graphics choices and stable performance profiles."; if(name.IndexOf("Rainbow",StringComparison.OrdinalIgnoreCase)>=0)return "Competitive graphics, frame-rate and latency recommendations."; if(name.IndexOf("Minecraft",StringComparison.OrdinalIgnoreCase)>=0)return "Java memory, render distance and practical mod guidance."; return "Graphics quality, resolution scaling and stable FPS settings."; }
+        private void ShowGameProfile(GameProfile profile) { StringBuilder text=new StringBuilder(); string install=profile.FindInstall(); text.AppendLine(install==null?"Game was not found in a standard install folder.":"Detected: "+install); text.AppendLine(); text.AppendLine("RECOMMENDED GAME SETTINGS"); foreach(string setting in profile.Settings) text.AppendLine("• "+setting); text.AppendLine(); text.AppendLine("LAUNCH AND PROFILE GUIDANCE"); text.AppendLine(profile.LaunchOptions); text.AppendLine(); text.AppendLine("Loading this profile selects "+profile.TweakIds.Length+" matching Windows tweaks. Nothing is applied until you review and confirm."); if(MessageBox.Show(text.ToString(),profile.Name+" profile",MessageBoxButtons.OKCancel,MessageBoxIcon.Information)==DialogResult.OK) LoadGameTweaks(profile); }
+        private void LoadGameTweaks(GameProfile profile) { _tweakSearch.Text=""; _tweakCategory.SelectedIndex=0; HashSet<string> ids=new HashSet<string>(profile.TweakIds); for(int i=0;i<_tweakList.Items.Count;i++){TweakDefinition tweak=(TweakDefinition)_tweakList.Items[i]; _tweakList.SetItemChecked(i,ids.Contains(tweak.Id));} AppendLog(profile.Name+" profile loaded with "+ids.Count+" matching tweaks."); Go(AppPage.Optimize); }
+
+        private void BuildSystemInfo()
         {
-            Panel p = new Panel();
-            p.Dock = DockStyle.Fill;
-            p.BackColor = Color.Transparent;
-            return p;
+            AddPageTitle(_pageSystem,"System Info","Hardware and Windows details collected locally from this computer."); Panel overview=FlatCard(24,96,1046,118,Color.FromArgb(34,211,238)); overview.Controls.Add(Heading("Live hardware overview",24,18,16,FontStyle.Bold)); overview.Controls.Add(Sub("Refresh after hardware, driver or power-plan changes.",26,52)); GlassButton refresh=new GlassButton(); refresh.Text="Refresh information"; refresh.Size=new Size(178,42); refresh.Location=new Point(840,38); refresh.Click+=delegate { RunScan(); }; overview.Controls.Add(refresh); _pageSystem.Controls.Add(overview); _systemDetails.Location=new Point(24,234); _systemDetails.Size=new Size(1046,522); _systemDetails.Font=new Font("Consolas",10.5f); _pageSystem.Controls.Add(_systemDetails);
         }
 
-        private static Label Heading(string text, int x, int y, float size)
+        private void BuildRestore()
         {
-            Label label = new Label();
-            label.Text = text;
-            label.Font = new Font("Segoe UI Light", size);
-            label.ForeColor = Fg;
-            label.BackColor = Color.Transparent;
-            label.AutoSize = true;
-            label.Location = new Point(x, y);
-            return label;
+            AddPageTitle(_pageRestore,"Restore","Undo registry optimizations and return supported Windows settings to their defaults."); Panel safe=FlatCard(24,100,1046,164,Green); safe.Controls.Add(Heading("Built-in restore values",26,22,18,FontStyle.Bold)); Label info=Sub("Registry-based tweaks include a defined default value. Command-based maintenance tasks do not need restoring.",28,61); info.MaximumSize=new Size(700,50); safe.Controls.Add(info); _restoreAllButton.Text="Restore all supported"; _restoreAllButton.Emphasized=true; _restoreAllButton.Size=new Size(206,46); _restoreAllButton.Location=new Point(808,54); _restoreAllButton.Click+=delegate { RestoreTweaks(true); }; safe.Controls.Add(_restoreAllButton); _pageRestore.Controls.Add(safe);
+            Panel how=FlatCard(24,286,514,254,Accent); how.Controls.Add(Heading("How restore works",24,20,16,FontStyle.Bold)); AddStep(how,"1","Choose Restore selected from PC Tweaks, or restore all here.",72); AddStep(how,"2","Confirm the exact scope before Windows is changed.",126); AddStep(how,"3","Restart Windows only when a restored item requires it.",180); _pageRestore.Controls.Add(how);
+            Panel activity=FlatCard(556,286,514,438,Color.FromArgb(96,165,250)); activity.Controls.Add(Heading("Activity log",22,18,16,FontStyle.Bold)); _log.Location=new Point(22,56); _log.Size=new Size(470,356); activity.Controls.Add(_log); _pageRestore.Controls.Add(activity); _restoreStatus.Text="No restore action has been run in this session."; _restoreStatus.Location=new Point(32,568); _restoreStatus.MaximumSize=new Size(476,90); _pageRestore.Controls.Add(_restoreStatus);
         }
+        private void AddStep(Control parent,string number,string text,int y) { Label n=new Label(); n.Text=number; n.TextAlign=ContentAlignment.MiddleCenter; n.Font=new Font("Segoe UI",10f,FontStyle.Bold); n.ForeColor=Color.White; n.BackColor=Accent; n.Location=new Point(24,y); n.Size=new Size(32,32); parent.Controls.Add(n); Label copy=Sub(text,72,y+5); copy.MaximumSize=new Size(400,42); parent.Controls.Add(copy); }
 
-        private static Label Sub(string text, int x, int y)
+        private void BuildSettings()
         {
-            Label label = new Label();
-            label.Text = text;
-            label.Font = new Font("Segoe UI", 10.5f);
-            label.ForeColor = Muted;
-            label.BackColor = Color.Transparent;
-            label.AutoSize = true;
-            label.Location = new Point(x, y);
-            return label;
+            AddPageTitle(_pageSettings,"Settings","Choose how Gujas PC Fix starts and how confirmations are handled."); Panel preferences=FlatCard(24,100,654,364,Accent); preferences.Controls.Add(Heading("Application preferences",26,22,17,FontStyle.Bold)); PlaceCheck(preferences,_showSplash,26,76,"Keep the branded startup screen when the app opens."); PlaceCheck(preferences,_autoRecommended,26,142,"Prepare the safe recommended set after startup."); PlaceCheck(preferences,_confirmAdvanced,26,208,"Ask before applying machine-wide registry settings."); PlaceCheck(preferences,_showResults,26,274,"Display a clear summary when apply or restore finishes."); _pageSettings.Controls.Add(preferences);
+            Panel about=FlatCard(700,100,370,364,Color.FromArgb(34,211,238)); about.Controls.Add(Heading("Gujas PC Fix",26,24,19,FontStyle.Bold)); about.Controls.Add(Sub("Version 2.0",28,63)); about.Controls.Add(Sub("Windows performance control center",28,102)); about.Controls.Add(Sub("60 PC tweaks",28,156)); about.Controls.Add(Sub("5 dedicated game profiles",28,190)); about.Controls.Add(Sub("Local system scan and restore",28,224)); Label admin=Sub(IsAdministrator()?"Administrator access: active":"Administrator access: required for advanced tweaks",28,286); admin.ForeColor=IsAdministrator()?Green:Color.FromArgb(251,191,36); admin.MaximumSize=new Size(310,44); about.Controls.Add(admin); _pageSettings.Controls.Add(about);
+            _saveSettingsButton.Text="Save settings"; _saveSettingsButton.Emphasized=true; _saveSettingsButton.Size=new Size(180,46); _saveSettingsButton.Location=new Point(24,492); _saveSettingsButton.Click+=delegate { SavePreferences(); }; _pageSettings.Controls.Add(_saveSettingsButton);
         }
+        private static bool IsAdministrator() { try { System.Security.Principal.WindowsIdentity identity=System.Security.Principal.WindowsIdentity.GetCurrent(); return new System.Security.Principal.WindowsPrincipal(identity).IsInRole(System.Security.Principal.WindowsBuiltInRole.Administrator); } catch { return false; } }
+        private void PlaceCheck(Control parent,CheckBox box,int x,int y,string description) { box.Location=new Point(x,y); parent.Controls.Add(box); parent.Controls.Add(Sub(description,x+24,y+28)); }
+        private void LoadPreferences() { AppPreferences.Load(); _showSplash.Checked=AppPreferences.ShowSplash; _autoRecommended.Checked=AppPreferences.AutoRecommended; _confirmAdvanced.Checked=AppPreferences.ConfirmAdvanced; _showResults.Checked=AppPreferences.ShowResults; if(_autoRecommended.Checked) SelectRecommended(); }
+        private void SavePreferences() { AppPreferences.ShowSplash=_showSplash.Checked; AppPreferences.AutoRecommended=_autoRecommended.Checked; AppPreferences.ConfirmAdvanced=_confirmAdvanced.Checked; AppPreferences.ShowResults=_showResults.Checked; AppPreferences.Save(); MessageBox.Show("Settings saved.","Gujas PC Fix",MessageBoxButtons.OK,MessageBoxIcon.Information); }
 
-        private Control StatCard(string caption, Label value, int x, int y)
+        private void RefreshTweakList()
         {
-            GlassPanel card = new GlassPanel();
-            card.Location = new Point(x, y);
-            card.Size = new Size(256, 132);
-            Label cap = new Label();
-            cap.Text = caption;
-            cap.Font = new Font("Segoe UI Semibold", 9f);
-            cap.ForeColor = Color.FromArgb(200, 200, 206);
-            cap.BackColor = Color.Transparent;
-            cap.AutoSize = true;
-            cap.Location = new Point(16, 14);
-            value.Location = new Point(16, 44);
-            value.MaximumSize = new Size(224, 70);
-            value.BackColor = Color.Transparent;
-            card.Controls.Add(cap);
-            card.Controls.Add(value);
-            return card;
+            if(_tweakCategory.SelectedIndex<0)return; HashSet<string> selected=new HashSet<string>(); foreach(object value in _tweakList.CheckedItems)selected.Add(((TweakDefinition)value).Id); string query=_tweakSearch.Text.Trim(), category=_tweakCategory.SelectedItem==null?"All categories":_tweakCategory.SelectedItem.ToString(); _tweakList.BeginUpdate(); _tweakList.Items.Clear(); foreach(TweakDefinition tweak in _tweaks){if(category!="All categories"&&tweak.Category!=category)continue; if(query.Length>0&&tweak.Name.IndexOf(query,StringComparison.OrdinalIgnoreCase)<0&&tweak.Description.IndexOf(query,StringComparison.OrdinalIgnoreCase)<0)continue; _tweakList.Items.Add(tweak,selected.Contains(tweak.Id));} _tweakList.EndUpdate(); UpdateTweakSummary();
         }
-
-        private void ApplyTuner()
-        {
-            GameProfile profile = _gameProfile.SelectedItem as GameProfile;
-            if (profile == null) return;
-            _tweakSearch.Text = "";
-            _tweakCategory.SelectedIndex = 0;
-            HashSet<string> ids = new HashSet<string>(profile.TweakIds);
-            for (int i = 0; i < _tweakList.Items.Count; i++)
-            {
-                TweakDefinition tweak = (TweakDefinition)_tweakList.Items[i];
-                _tweakList.SetItemChecked(i, ids.Contains(tweak.Id));
-            }
-            AppendLog(profile.Name + " profile loaded with " + ids.Count + " Windows tweaks.");
-            SyncNav(AppPage.Optimize);
-        }
-
-        private void PreviewGameProfile()
-        {
-            GameProfile profile = _gameProfile.SelectedItem as GameProfile;
-            if (profile == null) return;
-            System.Text.StringBuilder text = new System.Text.StringBuilder();
-            string install = profile.FindInstall();
-            text.AppendLine(install == null ? "Status: game was not found in a standard folder" : "Detected: " + install);
-            text.AppendLine();
-            text.AppendLine("Recommended game settings");
-            foreach (string setting in profile.Settings) text.AppendLine("• " + setting);
-            text.AppendLine();
-            text.AppendLine("Launch/profile guidance");
-            text.AppendLine(profile.LaunchOptions);
-            text.AppendLine();
-            text.AppendLine("The Load game tweaks button selects " + profile.TweakIds.Length + " matching Windows tweaks. You review them before applying anything.");
-            _tuneTips.Text = text.ToString();
-        }
+        private void SelectRecommended() { for(int i=0;i<_tweakList.Items.Count;i++)_tweakList.SetItemChecked(i,((TweakDefinition)_tweakList.Items[i]).Recommended); UpdateTweakSummary(); }
+        private void UpdateTweakSummary() { int restart=0; foreach(object value in _tweakList.CheckedItems)if(((TweakDefinition)value).RestartRequired)restart++; _selectionStatus.Text=_tweakList.CheckedItems.Count+" selected"+Environment.NewLine+(restart>0?restart+" require restart":"No restart items"); }
 
         private void RunScan()
         {
-            if (_busy) return;
-            SetBusy(true);
-            AppendLog("Scanning this PC...");
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
-                {
-                    ScanResult scan = PcFixEngine.Scan(delegate(string msg)
-                    {
-                        BeginInvoke(new Action(delegate { AppendLog(msg); }));
-                    });
-                    BeginInvoke(new Action(delegate
-                    {
-                        ApplyScan(scan);
-                        AppendLog("Scan complete. Reclaimable junk: " + PcFixEngine.FormatBytes(scan.TempBytes));
-                        SetBusy(false);
-                    }));
-                }
-                catch (Exception ex)
-                {
-                    BeginInvoke(new Action(delegate
-                    {
-                        AppendLog("Scan failed: " + ex.Message);
-                        SetBusy(false);
-                    }));
-                }
-            });
+            if(_busy)return; SetBusy(true); _scanStatus.Text="Scanning hardware and storage..."; AppendLog("Scanning this PC..."); ThreadPool.QueueUserWorkItem(delegate { try { ScanResult scan=PcFixEngine.Scan(delegate(string msg){BeginInvoke(new Action(delegate{AppendLog(msg);}));}); BeginInvoke(new Action(delegate{ApplyScan(scan); AppendLog("Scan complete. Reclaimable: "+PcFixEngine.FormatBytes(scan.TempBytes)); SetBusy(false);})); } catch(Exception ex){BeginInvoke(new Action(delegate{_scanStatus.Text="Scan could not finish"; AppendLog("Scan failed: "+ex.Message); SetBusy(false);}));} });
         }
-
         private void RunBoost()
         {
-            if (_busy) return;
-            List<TweakDefinition> selected = new List<TweakDefinition>();
-            foreach (object value in _tweakList.CheckedItems) selected.Add((TweakDefinition)value);
-            if (selected.Count == 0) { AppendLog("Select at least one tweak."); return; }
-
-            SetBusy(true);
-            AppendLog("==== applying " + selected.Count + " tweaks " + DateTime.Now.ToString("HH:mm:ss") + " ====");
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
-                {
-                    TweakRunResult result = TweakExecutor.Apply(selected, delegate(string msg)
-                    {
-                        BeginInvoke(new Action(delegate { AppendLog(msg); }));
-                    });
-                    BeginInvoke(new Action(delegate
-                    {
-                        for (int i = 0; i < result.Errors.Count; i++) AppendLog("Could not apply: " + result.Errors[i]);
-                        AppendLog("Completed. " + result.Applied + " of " + selected.Count + " tweaks applied.");
-                        SetBusy(false);
-                        SyncNav(AppPage.Activity);
-                    }));
-                }
-                catch (Exception ex)
-                {
-                    BeginInvoke(new Action(delegate
-                    {
-                        AppendLog("Boost failed: " + ex.Message);
-                        SetBusy(false);
-                    }));
-                }
-            });
+            if(_busy)return; List<TweakDefinition> selected=CheckedTweaks(false); if(selected.Count==0){MessageBox.Show("Select at least one tweak first.","Gujas PC Fix",MessageBoxButtons.OK,MessageBoxIcon.Information);return;} if(AppPreferences.ConfirmAdvanced&&selected.Any(x=>x.Risk==TweakRisk.Advanced)&&MessageBox.Show("This selection includes machine-wide advanced tweaks and may require administrator access. Continue?","Confirm advanced tweaks",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)!=DialogResult.Yes)return; SetBusy(true); AppendLog("Applying "+selected.Count+" selected tweaks..."); ThreadPool.QueueUserWorkItem(delegate{TweakRunResult result=TweakExecutor.Apply(selected,delegate(string msg){BeginInvoke(new Action(delegate{AppendLog(msg);}));}); BeginInvoke(new Action(delegate{foreach(string error in result.Errors)AppendLog("Could not apply: "+error); string summary=result.Applied+" of "+selected.Count+" tweaks applied"+(result.Errors.Count>0?". "+result.Errors.Count+" need attention.":" successfully."); AppendLog(summary); SetBusy(false); if(AppPreferences.ShowResults)MessageBox.Show(summary,"Optimization complete",MessageBoxButtons.OK,result.Errors.Count==0?MessageBoxIcon.Information:MessageBoxIcon.Warning);}));});
         }
-
-        private void RestoreTweaks()
+        private List<TweakDefinition> CheckedTweaks(bool all) { if(all)return _tweaks.Where(x=>string.IsNullOrEmpty(x.Command)).ToList(); List<TweakDefinition> list=new List<TweakDefinition>(); foreach(object value in _tweakList.CheckedItems)list.Add((TweakDefinition)value); return list; }
+        private void RestoreTweaks(bool all)
         {
-            if (_busy) return;
-            List<TweakDefinition> selected = new List<TweakDefinition>();
-            foreach (object value in _tweakList.CheckedItems) selected.Add((TweakDefinition)value);
-            if (selected.Count == 0) { AppendLog("Select the tweaks you want to restore."); return; }
-            DialogResult answer = MessageBox.Show("Restore the Windows defaults for " + selected.Count + " selected tweaks?", "Gujas PC Fix", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-            if (answer != DialogResult.Yes) return;
-            SetBusy(true);
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                TweakRunResult result = TweakExecutor.Restore(selected, delegate(string msg) { BeginInvoke(new Action(delegate { AppendLog(msg); })); });
-                BeginInvoke(new Action(delegate
-                {
-                    for (int i = 0; i < result.Errors.Count; i++) AppendLog("Could not restore: " + result.Errors[i]);
-                    AppendLog("Restored " + result.Applied + " registry tweaks.");
-                    SetBusy(false);
-                    SyncNav(AppPage.Activity);
-                }));
-            });
+            if(_busy)return; List<TweakDefinition> selected=CheckedTweaks(all).Where(x=>string.IsNullOrEmpty(x.Command)).ToList(); if(selected.Count==0){MessageBox.Show("Select at least one registry tweak to restore.","Gujas PC Fix",MessageBoxButtons.OK,MessageBoxIcon.Information);return;} if(MessageBox.Show("Restore Windows defaults for "+selected.Count+" supported tweaks?","Confirm restore",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return; SetBusy(true); AppendLog("Restoring "+selected.Count+" tweaks..."); ThreadPool.QueueUserWorkItem(delegate{TweakRunResult result=TweakExecutor.Restore(selected,delegate(string msg){BeginInvoke(new Action(delegate{AppendLog(msg);}));}); BeginInvoke(new Action(delegate{foreach(string error in result.Errors)AppendLog("Could not restore: "+error); _restoreStatus.Text="Last restore: "+result.Applied+" values restored at "+DateTime.Now.ToString("HH:mm")+"."; SetBusy(false); Go(AppPage.Restore); if(AppPreferences.ShowResults)MessageBox.Show(_restoreStatus.Text,"Restore complete",MessageBoxButtons.OK,result.Errors.Count==0?MessageBoxIcon.Information:MessageBoxIcon.Warning);}));});
         }
 
         private void ApplyScan(ScanResult scan)
         {
-            _cpuValue.Text = Truncate(scan.CpuName, 32) + Environment.NewLine + scan.LogicalCores + " logical cores";
-            _gpuValue.Text = Truncate(scan.GpuName, 32);
-            _ramValue.Text = scan.MemoryLoad + "% in use" + Environment.NewLine +
-                             PcFixEngine.FormatBytes(scan.AvailRamBytes) + " free / " +
-                             PcFixEngine.FormatBytes(scan.TotalRamBytes);
-            _ramGb = (int)(scan.TotalRamBytes / (1024UL * 1024UL * 1024UL));
-            if (scan.Drives.Count > 0)
-            {
-                DriveSnapshot d = scan.Drives[0];
-                _diskValue.Text = d.Name + "  " + PcFixEngine.FormatBytes(d.FreeBytes) + " free" + Environment.NewLine +
-                                  PcFixEngine.FormatBytes(d.TotalBytes) + " capacity";
-            }
-            else
-            {
-                _diskValue.Text = "No fixed disk";
-            }
-            _junkValue.Text = PcFixEngine.FormatBytes(scan.TempBytes) + Environment.NewLine + "temp / cache estimate";
-            _osValue.Text = Truncate(scan.OsCaption, 32) + Environment.NewLine + "plan  " + scan.PowerPlan;
-            _powerValue.Text = "Active power plan: " + scan.PowerPlan;
-
-            if (!_filledHardware)
-            {
-                _cpuBox.Text = scan.CpuName;
-                _gpuBox.Text = scan.GpuName;
-                _filledHardware = true;
-            }
+            _cpuValue.Text=Truncate(scan.CpuName,38)+Environment.NewLine+scan.LogicalCores+" logical cores"; _gpuValue.Text=Truncate(scan.GpuName,38); _ramValue.Text=scan.MemoryLoad+"% in use"+Environment.NewLine+PcFixEngine.FormatBytes(scan.AvailRamBytes)+" available";
+            if(scan.Drives.Count>0){DriveSnapshot d=scan.Drives[0]; _diskValue.Text=d.Name+"  "+PcFixEngine.FormatBytes(d.FreeBytes)+" free"+Environment.NewLine+PcFixEngine.FormatBytes(d.TotalBytes)+" total";}else _diskValue.Text="No fixed disk detected";
+            _junkValue.Text=PcFixEngine.FormatBytes(scan.TempBytes)+Environment.NewLine+"temporary data"; _osValue.Text=Truncate(scan.OsCaption,38)+Environment.NewLine+scan.PowerPlan; _powerValue.Text="Active power plan: "+scan.PowerPlan; _scanStatus.Text="Scan complete  •  "+scan.LogicalCores+" logical cores  •  "+PcFixEngine.FormatBytes(scan.TotalRamBytes)+" RAM";
+            StringBuilder dtext=new StringBuilder(); dtext.AppendLine("SYSTEM"); dtext.AppendLine("  Operating system     "+scan.OsCaption); dtext.AppendLine("  Runtime              "+scan.OsName); dtext.AppendLine("  Power plan           "+scan.PowerPlan); dtext.AppendLine(); dtext.AppendLine("PROCESSOR"); dtext.AppendLine("  Model                "+scan.CpuName); dtext.AppendLine("  Logical cores        "+scan.LogicalCores); dtext.AppendLine(); dtext.AppendLine("GRAPHICS"); dtext.AppendLine("  Adapter              "+scan.GpuName); dtext.AppendLine(); dtext.AppendLine("MEMORY"); dtext.AppendLine("  Installed            "+PcFixEngine.FormatBytes(scan.TotalRamBytes)); dtext.AppendLine("  Available            "+PcFixEngine.FormatBytes(scan.AvailRamBytes)); dtext.AppendLine("  Current load         "+scan.MemoryLoad+"%"); dtext.AppendLine(); dtext.AppendLine("STORAGE"); foreach(DriveSnapshot d in scan.Drives)dtext.AppendLine("  "+d.Name.PadRight(20)+PcFixEngine.FormatBytes(d.FreeBytes)+" free of "+PcFixEngine.FormatBytes(d.TotalBytes)); dtext.AppendLine(); dtext.AppendLine("MAINTENANCE"); dtext.AppendLine("  Reclaimable estimate "+PcFixEngine.FormatBytes(scan.TempBytes)); _systemDetails.Text=dtext.ToString();
         }
 
-        private void SetBusy(bool busy)
-        {
-            _busy = busy;
-            _scanButton.Enabled = !busy;
-            _boostButton.Enabled = !busy;
-            _restoreButton.Enabled = !busy;
-            _recommendedButton.Enabled = !busy;
-            _tuneButton.Enabled = !busy;
-            UseWaitCursor = busy;
-        }
-
-        private void AppendLog(string text)
-        {
-            _log.AppendText("[" + DateTime.Now.ToString("HH:mm:ss") + "] " + text + Environment.NewLine);
-        }
-
-        private static string Truncate(string value, int max)
-        {
-            if (string.IsNullOrEmpty(value) || value.Length <= max) return value;
-            return value.Substring(0, max - 1) + "...";
-        }
-
-        private static Label SmallLabel(string text, int x, int y)
-        {
-            Label label = new Label();
-            label.Text = text;
-            label.ForeColor = Muted;
-            label.BackColor = Color.Transparent;
-            label.AutoSize = true;
-            label.Location = new Point(x, y);
-            return label;
-        }
-
-        private static Label MakeValue()
-        {
-            Label label = new Label();
-            label.AutoSize = true;
-            label.Font = new Font("Segoe UI Semibold", 12f);
-            label.ForeColor = Fg;
-            label.BackColor = Color.Transparent;
-            label.Text = "...";
-            return label;
-        }
-
-        private static Label MakeMuted()
-        {
-            Label label = new Label();
-            label.AutoSize = true;
-            label.Font = new Font("Segoe UI", 9.5f);
-            label.ForeColor = Muted;
-            label.BackColor = Color.Transparent;
-            label.Text = "Active power plan: ...";
-            return label;
-        }
-
-        private static CheckBox MakeCheck(string text, bool on)
-        {
-            CheckBox box = new CheckBox();
-            box.Text = text;
-            box.Checked = on;
-            box.AutoSize = true;
-            box.ForeColor = Fg;
-            box.BackColor = Color.Transparent;
-            box.Margin = new Padding(8, 8, 24, 8);
-            return box;
-        }
-
-        private static TextBox MakeField()
-        {
-            TextBox box = new TextBox();
-            box.BorderStyle = BorderStyle.FixedSingle;
-            box.BackColor = Color.FromArgb(18, 18, 20);
-            box.ForeColor = Fg;
-            box.Font = new Font("Segoe UI", 10.5f);
-            return box;
-        }
-
-        private static TextBox MakeMultiline()
-        {
-            TextBox box = new TextBox();
-            box.Multiline = true;
-            box.ReadOnly = true;
-            box.ScrollBars = ScrollBars.Vertical;
-            box.BorderStyle = BorderStyle.None;
-            box.BackColor = Color.FromArgb(12, 12, 14);
-            box.ForeColor = Fg;
-            box.Font = new Font("Segoe UI", 9.5f);
-            return box;
-        }
+        private void SetBusy(bool busy) { _busy=busy; _scanButton.Enabled=!busy; _quickButton.Enabled=!busy; _boostButton.Enabled=!busy; _restoreButton.Enabled=!busy; _recommendedButton.Enabled=!busy; _restoreAllButton.Enabled=!busy; UseWaitCursor=busy; }
+        private void AppendLog(string text) { _log.AppendText("["+DateTime.Now.ToString("HH:mm:ss")+"] "+text+Environment.NewLine); }
+        private static Panel MakePage(){Panel p=new Panel();p.Dock=DockStyle.Fill;p.BackColor=Bg;return p;}
+        private void AddPageTitle(Control page,string title,string subtitle){page.Controls.Add(Heading(title,24,18,28,FontStyle.Bold));page.Controls.Add(Sub(subtitle,26,62));}
+        private static Panel FlatCard(int x,int y,int width,int height,Color stripe){Panel p=new Panel();p.Location=new Point(x,y);p.Size=new Size(width,height);p.BackColor=Card;p.Padding=new Padding(5,0,0,0);p.Paint+=delegate(object sender,PaintEventArgs e){using(SolidBrush b=new SolidBrush(stripe))e.Graphics.FillRectangle(b,0,0,5,p.Height);using(Pen pen=new Pen(Edge))e.Graphics.DrawRectangle(pen,5,0,p.Width-6,p.Height-1);};return p;}
+        private Control StatCard(string caption,Label value,int x,int y,Color accent){Panel card=FlatCard(x,y,334,142,accent);Label cap=SmallLabel(caption,20,18);cap.Font=new Font("Segoe UI Semibold",8.5f);cap.ForeColor=accent;value.Location=new Point(20,50);value.MaximumSize=new Size(294,76);card.Controls.Add(cap);card.Controls.Add(value);return card;}
+        private static Control InfoChip(string text,int x,int y,Color color){Label l=new Label();l.Text=text;l.TextAlign=ContentAlignment.MiddleCenter;l.Font=new Font("Segoe UI Semibold",8.5f);l.ForeColor=color;l.BackColor=CardAlt;l.Location=new Point(x,y);l.Size=new Size(text.Length*9+28,28);return l;}
+        private static Label Heading(string text,int x,int y,float size,FontStyle style){Label l=new Label();l.Text=text;l.Font=new Font("Segoe UI",size,style);l.ForeColor=Fg;l.BackColor=Color.Transparent;l.AutoSize=true;l.Location=new Point(x,y);return l;}
+        private static Label Sub(string text,int x,int y){Label l=new Label();l.Text=text;l.Font=new Font("Segoe UI",10f);l.ForeColor=Muted;l.BackColor=Color.Transparent;l.AutoSize=true;l.Location=new Point(x,y);return l;}
+        private static Label SmallLabel(string text,int x,int y){Label l=Sub(text,x,y);l.Font=new Font("Segoe UI",9f);return l;}
+        private static Label Metric(string text,int x,int y){Label l=Heading(text,x,y,25,FontStyle.Bold);l.ForeColor=Fg;return l;}
+        private static Label MakeValue(){Label l=new Label();l.AutoSize=true;l.Font=new Font("Segoe UI Semibold",11.5f);l.ForeColor=Fg;l.BackColor=Color.Transparent;l.Text="Scanning...";return l;}
+        private static Label MakeMuted(){Label l=new Label();l.AutoSize=true;l.Font=new Font("Segoe UI",9.5f);l.ForeColor=Muted;l.BackColor=Color.Transparent;l.Text="...";return l;}
+        private static CheckBox MakeCheck(string text,bool value){CheckBox b=new CheckBox();b.Text=text;b.Checked=value;b.AutoSize=true;b.ForeColor=Fg;b.BackColor=Color.Transparent;b.Font=new Font("Segoe UI Semibold",10.25f);return b;}
+        private static TextBox MakeField(){TextBox b=new TextBox();b.BorderStyle=BorderStyle.FixedSingle;b.BackColor=CardAlt;b.ForeColor=Fg;b.Font=new Font("Segoe UI",10.5f);return b;}
+        private static TextBox MakeMultiline(){TextBox b=new TextBox();b.Multiline=true;b.ReadOnly=true;b.ScrollBars=ScrollBars.Vertical;b.BorderStyle=BorderStyle.FixedSingle;b.BackColor=Card;b.ForeColor=Fg;b.Font=new Font("Segoe UI",9.5f);return b;}
+        private static string Truncate(string value,int max){if(string.IsNullOrEmpty(value)||value.Length<=max)return value;return value.Substring(0,max-1)+"…";}
     }
 }
