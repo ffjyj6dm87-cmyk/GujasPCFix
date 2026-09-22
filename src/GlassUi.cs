@@ -117,6 +117,50 @@ namespace GujasPCFix
         }
     }
 
+    internal class ModernCard : Panel
+    {
+        public Color AccentColor = Color.FromArgb(124, 92, 255);
+        public bool ShowAccent = true;
+
+        public ModernCard()
+        {
+            SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint |
+                     ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw |
+                     ControlStyles.SupportsTransparentBackColor, true);
+            BackColor = Color.Transparent;
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Theme.Quality(e.Graphics);
+            Rectangle r = ClientRectangle;
+            r.Width -= 1;
+            r.Height -= 1;
+            if (r.Width < 4 || r.Height < 4) return;
+            using (GraphicsPath path = Glass.RoundRect(r, 14))
+            using (SolidBrush fill = new SolidBrush(Color.FromArgb(18, 25, 42)))
+            using (Pen edge = new Pen(Color.FromArgb(38, 49, 72)))
+            {
+                e.Graphics.FillPath(fill, path);
+                e.Graphics.DrawPath(edge, path);
+                if (ShowAccent)
+                {
+                    e.Graphics.SetClip(path);
+                    using (LinearGradientBrush accent = new LinearGradientBrush(
+                        new Rectangle(0, 0, 6, Height), AccentColor,
+                        Color.FromArgb(80, AccentColor), LinearGradientMode.Vertical))
+                        e.Graphics.FillRectangle(accent, 0, 0, 5, Height);
+                    e.Graphics.ResetClip();
+                }
+            }
+            base.OnPaint(e);
+        }
+    }
+
     internal class GlassButton : Button
     {
         private bool _hot;

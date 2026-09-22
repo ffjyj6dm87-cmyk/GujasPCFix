@@ -23,10 +23,10 @@ namespace GujasPCFix
             Text = "Gujas PC Fix";
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.CenterScreen;
-            ClientSize = new Size(520, 300);
+            ClientSize = new Size(560, 330);
             DoubleBuffered = true;
             BackColor = Color.Black;
-            Opacity = 1.0;
+            Opacity = 0.93;
             ShowInTaskbar = false;
             TopMost = true;
             Theme.LoadWallpaper();
@@ -40,7 +40,7 @@ namespace GujasPCFix
         {
             base.OnLoad(e);
             RebuildFrost();
-            using (GraphicsPath round = Glass.RoundRect(new Rectangle(0, 0, Width, Height), 22))
+            using (GraphicsPath round = Glass.RoundRect(new Rectangle(0, 0, Width, Height), 28))
             {
                 Region = new Region(round);
             }
@@ -82,9 +82,9 @@ namespace GujasPCFix
         protected override void OnPaintBackground(PaintEventArgs e)
         {
             Theme.Quality(e.Graphics);
-            e.Graphics.Clear(Color.FromArgb(8, 13, 24));
+            e.Graphics.Clear(Color.FromArgb(7, 12, 23));
             using (LinearGradientBrush glow = new LinearGradientBrush(ClientRectangle,
-                Color.FromArgb(35, 29, 74), Color.FromArgb(8, 13, 24), LinearGradientMode.ForwardDiagonal))
+                Color.FromArgb(42, 31, 89), Color.FromArgb(7, 12, 23), LinearGradientMode.ForwardDiagonal))
                 e.Graphics.FillRectangle(glow, ClientRectangle);
         }
 
@@ -115,12 +115,29 @@ namespace GujasPCFix
                 fadeOut = 1f - Ease((float)((t - 1100.0) / 300.0));
             }
 
-            using (SolidBrush glow = new SolidBrush(Color.FromArgb(ClampByte(38 * fadeOut), 124, 92, 255)))
-                g.FillEllipse(glow, Width / 2 - 130, 28, 260, 210);
+            using (SolidBrush glow = new SolidBrush(Color.FromArgb(ClampByte(42 * fadeOut), 124, 92, 255)))
+                g.FillEllipse(glow, Width / 2 - 155, 18, 310, 245);
+
+            using (Pen border = new Pen(Color.FromArgb(ClampByte(110 * fadeOut), 151, 126, 255), 1.2f))
+            using (GraphicsPath borderPath = Glass.RoundRect(new Rectangle(1, 1, Width - 3, Height - 3), 27))
+                g.DrawPath(border, borderPath);
+
+            Rectangle logo = new Rectangle(Width / 2 - 24, 43, 48, 48);
+            using (GraphicsPath logoPath = Glass.RoundRect(logo, 13))
+            using (LinearGradientBrush logoFill = new LinearGradientBrush(logo, Color.FromArgb(124, 92, 255), Color.FromArgb(77, 208, 225), LinearGradientMode.ForwardDiagonal))
+                g.FillPath(logoFill, logoPath);
+            using (Font logoFont = new Font("Segoe UI", 20f, FontStyle.Bold))
+            using (SolidBrush logoText = new SolidBrush(Color.White))
+            using (StringFormat logoCenter = new StringFormat())
+            {
+                logoCenter.Alignment = StringAlignment.Center;
+                logoCenter.LineAlignment = StringAlignment.Center;
+                g.DrawString("G", logoFont, logoText, logo, logoCenter);
+            }
 
             int a = ClampByte(welcomeAlpha * fadeOut * 255);
-            using (Font hero = new Font("Segoe UI", 25f, FontStyle.Bold, GraphicsUnit.Point))
-            using (Font brand = new Font("Segoe UI Semibold", 11f, FontStyle.Regular, GraphicsUnit.Point))
+            using (Font hero = new Font("Segoe UI", 24f, FontStyle.Bold, GraphicsUnit.Point))
+            using (Font brand = new Font("Segoe UI Semibold", 9.5f, FontStyle.Regular, GraphicsUnit.Point))
             using (Font subtle = new Font("Segoe UI", 9f, FontStyle.Regular, GraphicsUnit.Point))
             using (SolidBrush white = new SolidBrush(Color.FromArgb(a, 255, 255, 255)))
             using (SolidBrush mute = new SolidBrush(Color.FromArgb(ClampByte(welcomeAlpha * fadeOut * 190), 210, 210, 214)))
@@ -128,12 +145,12 @@ namespace GujasPCFix
             {
                 center.Alignment = StringAlignment.Center;
                 center.LineAlignment = StringAlignment.Center;
-                g.DrawString("GUJAS PC FIX", hero, white, new RectangleF(0, 70, Width, 48), center);
-                g.DrawString("PERFORMANCE CONTROL CENTER", brand, white, new RectangleF(0, 119, Width, 24), center);
-                g.DrawString("Preparing system scan and optimization tools", subtle, mute, new RectangleF(0, 153, Width, 20), center);
+                g.DrawString("GUJAS PC FIX", hero, white, new RectangleF(0, 105, Width, 48), center);
+                g.DrawString("PERFORMANCE CONTROL CENTER", brand, white, new RectangleF(0, 151, Width, 24), center);
+                g.DrawString("Loading hardware scan, game profiles and restore tools", subtle, mute, new RectangleF(0, 184, Width, 20), center);
             }
 
-            Rectangle bar = new Rectangle((Width - 220) / 2, 214, 220, 6);
+            Rectangle bar = new Rectangle((Width - 250) / 2, 238, 250, 7);
             using (GraphicsPath track = Glass.RoundRect(bar, 4))
             using (SolidBrush trackBrush = new SolidBrush(Color.FromArgb(ClampByte(90 * fadeOut), 255, 255, 255)))
                 g.FillPath(trackBrush, track);
@@ -149,7 +166,7 @@ namespace GujasPCFix
             using (StringFormat center = new StringFormat())
             {
                 center.Alignment = StringAlignment.Center;
-                g.DrawString("VERSION 2.0", version, subtleBrush, new RectangleF(0, 244, Width, 20), center);
+                g.DrawString("VERSION 2.0  •  WINDOWS 10 / 11", version, subtleBrush, new RectangleF(0, 272, Width, 20), center);
             }
         }
 

@@ -159,6 +159,7 @@ namespace GujasPCFix
     {
         public AppPage Page = AppPage.Home;
         public event EventHandler PageChanged;
+        private AppPage _hoverPage = (AppPage)(-1);
 
         public MenuPane()
         {
@@ -167,13 +168,23 @@ namespace GujasPCFix
             DoubleBuffered = true;
         }
 
+        protected override void OnResize(EventArgs eventargs)
+        {
+            base.OnResize(eventargs);
+            if (Width < 4 || Height < 4) return;
+            Region old = Region;
+            using (GraphicsPath path = Glass.RoundRect(new Rectangle(0, 0, Width, Height), 18))
+                Region = new Region(path);
+            if (old != null) old.Dispose();
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             Graphics g = e.Graphics;
             Theme.Quality(g);
             g.Clear(Color.FromArgb(13, 18, 31));
-            using (SolidBrush accent = new SolidBrush(Color.FromArgb(124, 92, 255)))
-                g.FillRectangle(accent, 0, 0, 5, Height);
+            using (Pen edge = new Pen(Color.FromArgb(39, 50, 74)))
+                g.DrawRectangle(edge, 0, 0, Width - 1, Height - 1);
             using (Font logo = new Font("Segoe UI", 18f, FontStyle.Bold))
             using (Font version = new Font("Segoe UI", 8.5f, FontStyle.Bold))
             using (SolidBrush white = new SolidBrush(Color.White))
@@ -195,7 +206,7 @@ namespace GujasPCFix
             y = DrawRow(g, y, "Restore", "Undo changes", "restore", AppPage.Restore);
             DrawRow(g, y, "Settings", "App preferences", "settings", AppPage.Settings);
 
-            using (SolidBrush card = new SolidBrush(Color.FromArgb(22, 29, 46)))
+            using (SolidBrush card = new SolidBrush(Color.FromArgb(20, 28, 46)))
             using (GraphicsPath path = Glass.RoundRect(new Rectangle(22, Height - 105, Width - 44, 76), 14))
                 g.FillPath(card, path);
             using (SolidBrush green = new SolidBrush(Color.FromArgb(52, 211, 153))) g.FillEllipse(green, 38, Height - 79, 9, 9);
@@ -213,9 +224,10 @@ namespace GujasPCFix
         {
             Rectangle pill = new Rectangle(18, y, Width - 36, 58);
             bool on = Page == page;
+            bool hover = _hoverPage == page;
             using (GraphicsPath path = Glass.RoundRect(pill, 12))
             {
-                using (SolidBrush b = new SolidBrush(on ? Color.FromArgb(36, 31, 70) : Color.FromArgb(0, 13, 18, 31)))
+                using (SolidBrush b = new SolidBrush(on ? Color.FromArgb(38, 32, 73) : (hover ? Color.FromArgb(22, 30, 49) : Color.FromArgb(0, 13, 18, 31))))
                     g.FillPath(b, path);
             }
             if (on) using (SolidBrush bar = new SolidBrush(Color.FromArgb(124, 92, 255))) g.FillRectangle(bar, 18, y + 12, 4, 34);
@@ -239,6 +251,25 @@ namespace GujasPCFix
             for (int i = 0; i < pages.Length; i++, y += 66)
                 if (Hit(e, y)) { SetPage(pages[i]); break; }
             base.OnMouseClick(e);
+        }
+
+        protected override void OnMouseMove(MouseEventArgs e)
+        {
+            AppPage next = (AppPage)(-1);
+            int y = 128;
+            AppPage[] pages = { AppPage.Home, AppPage.Optimize, AppPage.Tuner, AppPage.SystemInfo, AppPage.Restore, AppPage.Settings };
+            for (int i = 0; i < pages.Length; i++, y += 66) if (Hit(e, y)) { next = pages[i]; break; }
+            if (next != _hoverPage) { _hoverPage = next; Invalidate(); }
+            Cursor = next == (AppPage)(-1) ? Cursors.Default : Cursors.Hand;
+            base.OnMouseMove(e);
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            _hoverPage = (AppPage)(-1);
+            Cursor = Cursors.Default;
+            Invalidate();
+            base.OnMouseLeave(e);
         }
 
         private bool Hit(MouseEventArgs e, int y)

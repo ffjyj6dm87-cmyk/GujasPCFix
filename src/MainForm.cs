@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Windows.Forms;
@@ -26,14 +27,41 @@ namespace GujasPCFix
         private readonly CheckBox _showSplash=MakeCheck("Show startup screen",true), _autoRecommended=MakeCheck("Select recommended tweaks on launch",false), _confirmAdvanced=MakeCheck("Confirm advanced system tweaks",true), _showResults=MakeCheck("Show result summary after changes",true);
         private bool _busy;
 
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, int wParam, int lParam);
+
         public MainForm()
         {
-            Text="Gujas PC Fix 2.0"; StartPosition=FormStartPosition.CenterScreen; ClientSize=new Size(1380,840); MinimumSize=new Size(1280,780); FormBorderStyle=FormBorderStyle.FixedSingle; MaximizeBox=false; Font=new Font("Segoe UI",10f); ForeColor=Fg; BackColor=Bg; DoubleBuffered=true;
-            _menu.Location=new Point(16,16); _menu.Size=new Size(238,808); _menu.PageChanged+=delegate { ShowPage(_menu.Page); };
-            _content.Location=new Point(270,16); _content.Size=new Size(1094,808); _content.BackColor=Bg;
+            Text="Gujas PC Fix 2.0"; StartPosition=FormStartPosition.CenterScreen; ClientSize=new Size(1380,840); MinimumSize=new Size(1280,780); FormBorderStyle=FormBorderStyle.None; MaximizeBox=false; Font=new Font("Segoe UI",10f); ForeColor=Fg; BackColor=Bg; DoubleBuffered=true;
+            BuildTitleBar();
+            _menu.Location=new Point(16,48); _menu.Size=new Size(238,776); _menu.PageChanged+=delegate { ShowPage(_menu.Page); };
+            _content.Location=new Point(270,48); _content.Size=new Size(1094,776); _content.BackColor=Bg;
             BuildHome(); BuildOptimize(); BuildTuner(); BuildSystemInfo(); BuildRestore(); BuildSettings();
             _content.Controls.Add(_pageSettings); _content.Controls.Add(_pageRestore); _content.Controls.Add(_pageSystem); _content.Controls.Add(_pageTuner); _content.Controls.Add(_pageOptimize); _content.Controls.Add(_pageHome);
             Controls.Add(_menu); Controls.Add(_content); LoadPreferences(); ShowPage(AppPage.Home); Shown+=delegate { RunScan(); };
+        }
+
+        private void BuildTitleBar()
+        {
+            Panel bar=new Panel(); bar.Location=new Point(0,0); bar.Size=new Size(ClientSize.Width,38); bar.BackColor=Color.FromArgb(10,16,28); bar.MouseDown+=DragWindow;
+            Label mark=new Label(); mark.Text="G"; mark.TextAlign=ContentAlignment.MiddleCenter; mark.Font=new Font("Segoe UI",9f,FontStyle.Bold); mark.ForeColor=Color.White; mark.BackColor=Accent; mark.Location=new Point(16,8); mark.Size=new Size(22,22); mark.MouseDown+=DragWindow; bar.Controls.Add(mark);
+            Label title=new Label(); title.Text="GUJAS PC FIX"; title.Font=new Font("Segoe UI Semibold",9.5f); title.ForeColor=Color.FromArgb(215,222,235); title.AutoSize=true; title.Location=new Point(48,10); title.MouseDown+=DragWindow; bar.Controls.Add(title);
+            Label state=new Label(); state.Text=IsAdministrator()?"ADMIN MODE":"STANDARD MODE"; state.TextAlign=ContentAlignment.MiddleCenter; state.Font=new Font("Segoe UI Semibold",7.5f); state.ForeColor=IsAdministrator()?Green:Color.FromArgb(251,191,36); state.BackColor=Color.FromArgb(20,28,45); state.Location=new Point(176,8); state.Size=new Size(106,22); bar.Controls.Add(state);
+            Button minimize=WindowButton("–",ClientSize.Width-76); minimize.Click+=delegate { WindowState=FormWindowState.Minimized; }; bar.Controls.Add(minimize);
+            Button close=WindowButton("×",ClientSize.Width-38); close.FlatAppearance.MouseOverBackColor=Color.FromArgb(190,45,62); close.Click+=delegate { Close(); }; bar.Controls.Add(close);
+            Controls.Add(bar); bar.BringToFront();
+        }
+
+        private static Button WindowButton(string text,int x)
+        {
+            Button b=new Button(); b.Text=text; b.Location=new Point(x,0); b.Size=new Size(38,38); b.FlatStyle=FlatStyle.Flat; b.FlatAppearance.BorderSize=0; b.FlatAppearance.MouseOverBackColor=Color.FromArgb(35,45,65); b.BackColor=Color.Transparent; b.ForeColor=Color.FromArgb(205,214,230); b.Font=new Font("Segoe UI",12f); b.TabStop=false; return b;
+        }
+
+        private void DragWindow(object sender,MouseEventArgs e)
+        {
+            if(e.Button!=MouseButtons.Left)return; ReleaseCapture(); SendMessage(Handle,0xA1,0x2,0);
         }
 
         protected override CreateParams CreateParams { get { CreateParams cp=base.CreateParams; cp.ExStyle|=0x02000000; return cp; } }
@@ -60,7 +88,7 @@ namespace GujasPCFix
             _tweakSearch.Location=new Point(24,132); _tweakSearch.Size=new Size(376,30); _tweakSearch.TextChanged+=delegate { RefreshTweakList(); }; _pageOptimize.Controls.Add(_tweakSearch);
             _tweakCategory.Location=new Point(416,132); _tweakCategory.Size=new Size(210,30); _tweakCategory.DropDownStyle=ComboBoxStyle.DropDownList; _tweakCategory.FlatStyle=FlatStyle.Flat; _tweakCategory.BackColor=CardAlt; _tweakCategory.ForeColor=Fg; _tweakCategory.Items.Add("All categories"); foreach(string category in _tweaks.Select(x=>x.Category).Distinct()) _tweakCategory.Items.Add(category); _tweakCategory.SelectedIndex=0; _tweakCategory.SelectedIndexChanged+=delegate { RefreshTweakList(); }; _pageOptimize.Controls.Add(_tweakCategory);
             _recommendedButton.Text="Select recommended"; _recommendedButton.Size=new Size(190,38); _recommendedButton.Location=new Point(644,127); _recommendedButton.Click+=delegate { SelectRecommended(); }; _pageOptimize.Controls.Add(_recommendedButton);
-            _tweakList.Location=new Point(24,180); _tweakList.Size=new Size(810,438); _tweakList.BackColor=Card; _tweakList.ForeColor=Fg; _tweakList.BorderStyle=BorderStyle.FixedSingle; _tweakList.CheckOnClick=true; _tweakList.Font=new Font("Segoe UI",10.25f); _tweakList.ItemHeight=28;
+            _tweakList.Location=new Point(24,180); _tweakList.Size=new Size(810,438); _tweakList.BackColor=Card; _tweakList.ForeColor=Fg; _tweakList.BorderStyle=BorderStyle.None; _tweakList.CheckOnClick=true; _tweakList.Font=new Font("Segoe UI",10.25f); _tweakList.DrawMode=DrawMode.OwnerDrawFixed; _tweakList.ItemHeight=34; _tweakList.DrawItem+=DrawTweakItem;
             _tweakList.ItemCheck+=delegate { BeginInvoke(new Action(UpdateTweakSummary)); }; _tweakList.SelectedIndexChanged+=delegate { TweakDefinition item=_tweakList.SelectedItem as TweakDefinition; _tweakDescription.Text=item==null?"Select a tweak to see exactly what it changes.":item.Description+(item.RestartRequired?"  Restart required.":""); }; _pageOptimize.Controls.Add(_tweakList);
             Panel side=FlatCard(850,180,220,438,Accent); side.Controls.Add(Heading("Selection",18,18,14,FontStyle.Bold)); _selectionStatus.Location=new Point(18,54); _selectionStatus.MaximumSize=new Size(182,80); side.Controls.Add(_selectionStatus); side.Controls.Add(Sub("Recommended",18,130)); side.Controls.Add(Metric(_tweaks.Count(x=>x.Recommended).ToString(),18,153)); side.Controls.Add(Sub("Advanced",18,212)); side.Controls.Add(Metric(_tweaks.Count(x=>x.Risk==TweakRisk.Advanced).ToString(),18,235)); side.Controls.Add(Sub("Restart items",18,294)); side.Controls.Add(Metric(_tweaks.Count(x=>x.RestartRequired).ToString(),18,317)); _pageOptimize.Controls.Add(side);
             _tweakDescription.Location=new Point(28,632); _tweakDescription.MaximumSize=new Size(800,44); _pageOptimize.Controls.Add(_tweakDescription);
@@ -115,6 +143,13 @@ namespace GujasPCFix
         {
             if(_tweakCategory.SelectedIndex<0)return; HashSet<string> selected=new HashSet<string>(); foreach(object value in _tweakList.CheckedItems)selected.Add(((TweakDefinition)value).Id); string query=_tweakSearch.Text.Trim(), category=_tweakCategory.SelectedItem==null?"All categories":_tweakCategory.SelectedItem.ToString(); _tweakList.BeginUpdate(); _tweakList.Items.Clear(); foreach(TweakDefinition tweak in _tweaks){if(category!="All categories"&&tweak.Category!=category)continue; if(query.Length>0&&tweak.Name.IndexOf(query,StringComparison.OrdinalIgnoreCase)<0&&tweak.Description.IndexOf(query,StringComparison.OrdinalIgnoreCase)<0)continue; _tweakList.Items.Add(tweak,selected.Contains(tweak.Id));} _tweakList.EndUpdate(); UpdateTweakSummary();
         }
+        private void DrawTweakItem(object sender,DrawItemEventArgs e)
+        {
+            if(e.Index<0||e.Index>=_tweakList.Items.Count)return; TweakDefinition tweak=(TweakDefinition)_tweakList.Items[e.Index]; bool selected=(e.State&DrawItemState.Selected)==DrawItemState.Selected; bool check=_tweakList.GetItemChecked(e.Index); Color row=selected?Color.FromArgb(40,34,76):(e.Index%2==0?Card:Color.FromArgb(20,28,46)); using(SolidBrush bg=new SolidBrush(row))e.Graphics.FillRectangle(bg,e.Bounds);
+            Rectangle box=new Rectangle(e.Bounds.X+12,e.Bounds.Y+8,17,17); ControlPaint.DrawCheckBox(e.Graphics,box,check?ButtonState.Checked:ButtonState.Normal);
+            Rectangle nameRect=new Rectangle(e.Bounds.X+40,e.Bounds.Y+3,560,e.Bounds.Height-5); TextRenderer.DrawText(e.Graphics,tweak.Name,Font,nameRect,Fg,TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);
+            Rectangle tagRect=new Rectangle(e.Bounds.Right-150,e.Bounds.Y+5,128,e.Bounds.Height-10); Color tag=tweak.Risk==TweakRisk.Advanced?Color.FromArgb(251,191,36):Color.FromArgb(52,211,153); using(Font tagFont=new Font("Segoe UI Semibold",8.5f)) TextRenderer.DrawText(e.Graphics,tweak.Category,tagFont,tagRect,tag,TextFormatFlags.Right|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis);
+        }
         private void SelectRecommended() { for(int i=0;i<_tweakList.Items.Count;i++)_tweakList.SetItemChecked(i,((TweakDefinition)_tweakList.Items[i]).Recommended); UpdateTweakSummary(); }
         private void UpdateTweakSummary() { int restart=0; foreach(object value in _tweakList.CheckedItems)if(((TweakDefinition)value).RestartRequired)restart++; _selectionStatus.Text=_tweakList.CheckedItems.Count+" selected"+Environment.NewLine+(restart>0?restart+" require restart":"No restart items"); }
 
@@ -144,7 +179,7 @@ namespace GujasPCFix
         private void AppendLog(string text) { _log.AppendText("["+DateTime.Now.ToString("HH:mm:ss")+"] "+text+Environment.NewLine); }
         private static Panel MakePage(){Panel p=new Panel();p.Dock=DockStyle.Fill;p.BackColor=Bg;return p;}
         private void AddPageTitle(Control page,string title,string subtitle){page.Controls.Add(Heading(title,24,18,28,FontStyle.Bold));page.Controls.Add(Sub(subtitle,26,62));}
-        private static Panel FlatCard(int x,int y,int width,int height,Color stripe){Panel p=new Panel();p.Location=new Point(x,y);p.Size=new Size(width,height);p.BackColor=Card;p.Padding=new Padding(5,0,0,0);p.Paint+=delegate(object sender,PaintEventArgs e){using(SolidBrush b=new SolidBrush(stripe))e.Graphics.FillRectangle(b,0,0,5,p.Height);using(Pen pen=new Pen(Edge))e.Graphics.DrawRectangle(pen,5,0,p.Width-6,p.Height-1);};return p;}
+        private static Panel FlatCard(int x,int y,int width,int height,Color stripe){ModernCard p=new ModernCard();p.Location=new Point(x,y);p.Size=new Size(width,height);p.AccentColor=stripe;p.Padding=new Padding(5,0,0,0);return p;}
         private Control StatCard(string caption,Label value,int x,int y,Color accent){Panel card=FlatCard(x,y,334,142,accent);Label cap=SmallLabel(caption,20,18);cap.Font=new Font("Segoe UI Semibold",8.5f);cap.ForeColor=accent;value.Location=new Point(20,50);value.MaximumSize=new Size(294,76);card.Controls.Add(cap);card.Controls.Add(value);return card;}
         private static Control InfoChip(string text,int x,int y,Color color){Label l=new Label();l.Text=text;l.TextAlign=ContentAlignment.MiddleCenter;l.Font=new Font("Segoe UI Semibold",8.5f);l.ForeColor=color;l.BackColor=CardAlt;l.Location=new Point(x,y);l.Size=new Size(text.Length*9+28,28);return l;}
         private static Label Heading(string text,int x,int y,float size,FontStyle style){Label l=new Label();l.Text=text;l.Font=new Font("Segoe UI",size,style);l.ForeColor=Fg;l.BackColor=Color.Transparent;l.AutoSize=true;l.Location=new Point(x,y);return l;}
