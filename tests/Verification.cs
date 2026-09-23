@@ -58,15 +58,17 @@ namespace GujasPCFix
                 }
 
                 Application.EnableVisualStyles(); Application.SetCompatibleTextRenderingDefault(false);
-                using (ReferenceMainForm form = new ReferenceMainForm())
+                using (ReferenceMainForm form = new ReferenceMainForm(false))
                 {
-                    IntPtr handle = form.Handle;
+                    form.Show(); Application.DoEvents();
                     MethodInfo navigate = typeof(ReferenceMainForm).GetMethod("Navigate", BindingFlags.Instance | BindingFlags.NonPublic);
                     foreach (string page in new[] { "Dashboard", "Game Tweaks", "Optimize", "Clean", "System Tools", "Startup Apps", "Privacy", "Performance", "Settings" })
                     {
-                        navigate.Invoke(form, new object[] { page }); form.PerformLayout();
+                        navigate.Invoke(form, new object[] { page }); form.PerformLayout(); Application.DoEvents();
                         using (Bitmap image = new Bitmap(form.Width, form.Height))
-                        { form.DrawToBitmap(image, form.ClientRectangle); image.Save(Path.Combine("qa", page.Replace(" ", "-") + ".png")); }
+                        { form.DrawToBitmap(image, form.ClientRectangle);
+                          Check(image.GetPixel(70, 45).ToArgb() != image.GetPixel(1030, 690).ToArgb(), page + " contains rendered controls");
+                          image.Save(Path.Combine("qa", page.Replace(" ", "-") + ".png")); }
                         Check(true, page + " builds and renders");
                     }
                     navigate.Invoke(form, new object[] { "Game Tweaks" });
