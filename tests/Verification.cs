@@ -74,7 +74,12 @@ namespace GujasPCFix
                     navigate.Invoke(form, new object[] { "Game Tweaks" });
                     MethodInfo game = typeof(ReferenceMainForm).GetMethod("OpenGame", BindingFlags.Instance | BindingFlags.NonPublic);
                     foreach (GameProfile profile in GameProfiles.Create())
-                    { game.Invoke(form, new object[] { profile }); Check(true, profile.Name + " detail page builds"); }
+                    {
+                        game.Invoke(form, new object[] { profile }); Application.DoEvents();
+                        using (Bitmap image = new Bitmap(form.Width, form.Height))
+                        { form.DrawToBitmap(image, form.ClientRectangle); image.Save(Path.Combine("qa", "Game-" + profile.Name.Replace(" ", "-") + ".png")); }
+                        Check(true, profile.Name + " detail page builds");
+                    }
                 }
                 File.WriteAllLines("qa/tweak-audit.tsv", new[] { "ID\tMODE\tDESCRIPTION\tEVIDENCE" }.Concat(catalog.Select(t => t.Id + "\t" + (t.SettingsUri != null ? "Manual Windows control" : t.DisabledReason != null ? "Blocked" : "Automatic, hardware-dependent") + "\t" + t.Description + "\t" + t.Evidence)));
                 Console.WriteLine(assertions + " checks passed. No actual performance tweaks were applied to the runner.");
