@@ -31,7 +31,7 @@ namespace GujasPCFix
         [DllImport("user32.dll")] static extern bool ReleaseCapture();
         [DllImport("user32.dll")] static extern IntPtr SendMessage(IntPtr h, int m, int w, int l);
 
-        public ReferenceMainForm()
+        public ReferenceMainForm(bool scanOnShow = true)
         {
             Text = "GujasPCFix 2.1 • Reference Edition";
             AutoScaleMode = AutoScaleMode.None;
@@ -78,7 +78,7 @@ namespace GujasPCFix
             ButtonAt(title, "×", 803, 0, 38, 30, false, delegate { Close(); });
             FormClosing += delegate(object sender, FormClosingEventArgs e) { if (busy) { e.Cancel = true; MessageBox.Show(this, "Wait for the current operation to finish before closing.", "Operation running"); } };
             Navigate("Dashboard");
-            Shown += async delegate { await ScanAsync(); };
+            if (scanOnShow) Shown += async delegate { await ScanAsync(); };
         }
 
         static Image LoadArt(string name)
