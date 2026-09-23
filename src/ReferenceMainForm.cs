@@ -49,7 +49,7 @@ namespace GujasPCFix
             sidebar.BackColor = Color.FromArgb(9, 19, 28);
             sidebar.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Bottom;
             Controls.Add(sidebar);
-            Label bolt = LabelAt(sidebar, "ϟ", 22, 19, 33, Color.FromArgb(40, 142, 255), true);
+            LightningAt(sidebar, 25, 27, 27, 38);
             LabelAt(sidebar, "GujasPCFix", 57, 33, 12, Color.White, true);
             LabelAt(sidebar, "Optimize · Clean · Perform", 58, 56, 6.8f, Muted, false);
             string[] names = { "Dashboard", "Optimize", "Clean", "Game Tweaks", "System Tools", "Startup Apps", "Privacy", "Performance", "Settings" };
@@ -137,7 +137,9 @@ namespace GujasPCFix
             for (int i = 0; i < 4; i++)
             {
                 string dest = titles[i]; Panel c = Card(content, 19 + i * 205, 330, 191, 153);
-                LabelAt(c, icons[i], 15, 11, 23, Blue, true); LabelAt(c, titles[i], 63, 24, 9, Color.White, true);
+                if (i == 0) LightningAt(c, 22, 17, 24, 34);
+                else LabelAt(c, icons[i], 15, 11, 23, Blue, true);
+                LabelAt(c, titles[i], 63, 24, 9, Color.White, true);
                 LabelAt(c, copy[i], 17, 64, 8.5f, Muted, false);
                 ButtonAt(c, actions[i] + "   →", 16, 109, 159, 32, false, delegate { Navigate(dest); });
             }
@@ -199,7 +201,7 @@ namespace GujasPCFix
             for (int i = 0; i < 4; i++)
             {
                 string category = cats[i]; Panel c = Card(content, 19 + i * 205, 425, 193, 86);
-                LabelAt(c, new[] { "⚙", "▣", "▤", "◷" }[i], 14, 17, 22, Muted, true);
+                LabelAt(c, new[] { "⚙", "▣", "▤", "◷" }[i], 12, 18, 18, Muted, true);
                 LabelAt(c, category, 56, 20, 8, Color.White, true);
                 LabelAt(c, desc[i], 56, 43, 7, Muted, false);
                 c.Cursor = Cursors.Hand; c.Click += delegate { OpenGameCategory(category); };
@@ -253,7 +255,8 @@ namespace GujasPCFix
                     bool automatic = string.IsNullOrEmpty(item.DisabledReason) && string.IsNullOrEmpty(item.SettingsUri);
                     CheckBox box = new CheckBox { Text = item.Name, Bounds = new Rectangle(12, 8, row.Width - 24, 24), Checked = selected.Contains(item.Id), ForeColor = Color.White, Enabled = automatic };
                     box.CheckedChanged += delegate { if (box.Checked) selected.Add(item.Id); else selected.Remove(item.Id); selection.Text = selected.Count + " selected"; };
-                    row.Controls.Add(box);
+                    if (automatic) row.Controls.Add(box);
+                    else { box.Dispose(); LabelAt(row, item.Name, 31, 10, 9, Color.White, true); }
                     Label detail = LabelAt(row, item.Description, 31, 34, 8, Muted, false); detail.AutoSize = false; detail.Size = new Size(row.Width - 45, 43);
                     string state = !automatic ? (item.SettingsUri == null ? "Unavailable: no verified effect" : "Manual · Windows control") : group(item) + (item.RestartRequired ? " · Restart" : "") + (string.IsNullOrEmpty(item.Command) ? " · Backed up" : " · Cannot undo");
                     LabelAt(row, state, 31, 83, 7, Blue, false);
@@ -341,6 +344,17 @@ namespace GujasPCFix
             ButtonAt(c, "Save settings", 24, 139, 180, 38, true, delegate { try { AppPreferences.ShowSplash = splash.Checked; AppPreferences.Save(); MessageBox.Show(this, "Settings saved."); } catch (Exception ex) { MessageBox.Show(this, ex.Message, "Settings not saved"); } });
         }
 
+        static void LightningAt(Control parent, int x, int y, int width, int height)
+        {
+            Panel icon = new Panel { Bounds = new Rectangle(x, y, width, height), BackColor = parent.BackColor };
+            icon.Paint += delegate(object sender, PaintEventArgs e)
+            {
+                e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                using (SolidBrush b = new SolidBrush(Blue))
+                    e.Graphics.FillPolygon(b, new[] { new Point(width * 3 / 4, 0), new Point(0, height * 3 / 5), new Point(width * 2 / 5, height * 3 / 5), new Point(width / 5, height), new Point(width, height * 2 / 5), new Point(width * 3 / 5, height * 2 / 5) });
+            };
+            parent.Controls.Add(icon);
+        }
         static Label LabelAt(Control parent, string text, int x, int y, float size, Color color, bool bold)
         {
             Label l = new Label { Text = text, AutoSize = true, Location = new Point(x, y), ForeColor = color, BackColor = Color.Transparent, Font = new Font("Segoe UI", size, bold ? FontStyle.Bold : FontStyle.Regular) };
